@@ -1,0 +1,58 @@
+name: Flutter checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: flutter-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  quality:
+    # Public standard runners have free minutes. A future private repository
+    # requires explicit allowance/billing verification before runs are enabled.
+    if: github.event.repository.private == false || vars.ZERO_SPEND_CI_READY == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.6'
+          channel: stable
+          cache: false
+      - name: Automated, business, UI acceptance, 10000 generated levels
+        # Temporary diagnostics while local Dart execution is unavailable.
+        # The next candidate removes this normalization after applying its diff.
+        run: |
+          dart format lib test integration_test tool test_driver
+          git diff
+          bash tool/quality_gate.sh
+      - name: Print executed test result
+        if: always()
+        run: |
+          if [ -f test-results/flutter.json ]; then cat test-results/flutter.json; fi
+      - name: Print source identity
+        if: always()
+        run: |
+          if [ -f test-results/source-identity.json ]; then cat test-results/source-identity.json; fi
+      - name: Compile portable candidate
+        run: flutter build web --release --no-pub
+      - name: Publish checks to run summary without paid artifact storage
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:
+            f.write('Bus Jam checks. Native iOS and sandbox verification are separate Codemagic gates.\n\n')
+            p=Path('docs/evidence/generator.json')
+            if p.exists(): f.write('```json\n'+p.read_text()+'\n```\n')
+            p=Path('test-results/flutter.json')
+            if p.exists():
+              events=[json.loads(x) for x in p.read_text().splitlines() if x.startswith('{')]
+              result=next((e for e in reversed(events) if e.get('type')=='done'),None)
+              f.write('Flutter result: '+json.dumps(result)+'\n')
+          PY
