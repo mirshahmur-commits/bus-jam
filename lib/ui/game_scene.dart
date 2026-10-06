@@ -275,8 +275,7 @@ class BoardPainter extends CustomPainter {
     }
     if (t < 1 && result != null && before != null) {
       for (final b in result!.departures) {
-        final parking = boardingPosition(b.id),
-            start = prev[b.id] ?? parking;
+        final parking = boardingPosition(b.id), start = prev[b.id] ?? parking;
         var r = Rect.lerp(
           start,
           parking,
