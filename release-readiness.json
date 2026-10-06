@@ -1,6 +1,6 @@
 {
   "version": "1.0.0+1",
-  "source_sha256": "3ce99297f8f09d622128be8a7ff6b87afa739a80c85989566c3459b181e257c1",
+  "source_sha256": "90e8863994843d1a1c5dc07ec7bc97b4a1af82c29c01e2e7b032ae142ece0365",
   "checks": {
     "automated": {
       "status": "Passed",

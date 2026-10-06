@@ -10,9 +10,11 @@ import 'platform/durable_analytics.dart';
 import 'platform/remote_config.dart';
 import 'platform/progress_store.dart';
 import 'ui/app.dart';
+import 'ui/urban_assets.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await UrbanAssets.instance.load();
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   final analytics = DurableAnalytics(
     PreferencesProgressStore(key: 'bus_jam.analytics.v1'),

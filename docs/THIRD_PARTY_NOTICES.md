@@ -1,7 +1,12 @@
 # Attribution and licenses
 
-- Game source, vector city/bus/passenger art, icon SVG and synthesized WAV sounds:
-  original SystemCraft Games work for this project. No external game assets used.
+- Game source, interface geometry and synthesized WAV sounds: original
+  SystemCraft Games work for this project.
+- Urban bus/passenger sprites, city, result illustrations, app icon and wordmark:
+  AI-generated for this project with the built-in image generation tool on
+  6 October 2026. The owner selected the urban stylized game direction. No game
+  screenshots, franchise logos, characters or extracted third-party assets are
+  distributed. See `docs/ART_DIRECTION.md` for prompts and asset use.
 - Nunito font: Google Fonts Nunito, SIL Open Font License 1.1. License bundled in
   `assets/fonts/OFL.txt`; source https://github.com/google/fonts/tree/main/ofl/nunito.
 - Flutter/Dart: BSD-style license, https://github.com/flutter/flutter/blob/master/LICENSE.

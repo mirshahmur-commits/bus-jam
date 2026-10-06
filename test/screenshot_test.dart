@@ -10,12 +10,14 @@ import 'package:bus_jam/game/engine.dart';
 import 'package:bus_jam/game/model.dart';
 import 'package:bus_jam/platform/progress_store.dart';
 import 'package:bus_jam/ui/app.dart';
+import 'package:bus_jam/ui/urban_assets.dart';
 
 import 'fixtures.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() async {
+    await UrbanAssets.instance.load();
     final loader = FontLoader('Nunito')
       ..addFont(rootBundle.load('assets/fonts/Nunito.ttf'));
     await loader.load();

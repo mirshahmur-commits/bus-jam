@@ -27,3 +27,12 @@ Before release, visually inspect native screenshots, colors/symbols, touch targe
 notches/safe areas and reduced motion on supported iPhones; verify native audio,
 haptics, foreground/background and force-quit/relaunch, performance and storefront
 paths on the signed candidate. Mark unavailable checks **Not run**, never Passed.
+
+## Urban art acceptance
+
+- UAT-14: Bundled bus/person pairs and result/branding images decode, retain
+  transparent margins and adult proportions; all six matching symbols remain
+  readable at mobile scale. First-frame artwork is loaded before interactions.
+- Re-execute UAT-01 through UAT-09 and all five layout sizes after the refresh.
+  Capture home/game/win/fail/settings on the native iPhone simulator. Check
+  occupancy dots, hint outlines, passenger motion and front-bus hit targets.

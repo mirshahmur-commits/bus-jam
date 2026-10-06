@@ -8,6 +8,7 @@ import '../game/controller.dart';
 import '../game/model.dart';
 import 'art.dart';
 import 'game_scene.dart';
+import 'urban_assets.dart';
 
 class BusJamApp extends StatefulWidget {
   const BusJamApp({
@@ -144,7 +145,7 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
       snackBarTheme: SnackBarThemeData(
         backgroundColor: ink,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     ),
     home: Builder(
@@ -162,9 +163,9 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Color(0xFFE1EBDD),
-                  Color(0xFFF5F3E8),
-                  Color(0xFFDFEAE3),
+                  Color(0xFFE4E8ED),
+                  Color(0xFFF2F1ED),
+                  Color(0xFFDCE2E8),
                 ],
               ),
             ),
@@ -263,7 +264,7 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
         backgroundColor: teal,
         foregroundColor: Colors.white,
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       child: FittedBox(
         fit: BoxFit.scaleDown,
@@ -285,7 +286,7 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
     padding: const EdgeInsets.all(19),
     decoration: BoxDecoration(
       color: color,
-      borderRadius: BorderRadius.circular(26),
+      borderRadius: BorderRadius.circular(16),
       border: Border.all(color: Colors.white.withValues(alpha: .8)),
       boxShadow: [
         BoxShadow(
@@ -332,7 +333,7 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
         ),
         const SizedBox(height: 25),
         const Text(
-          'Little buses.\nBig brain energy.',
+          'CITY TRAFFIC.\nYOUR NEXT MOVE.',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w600,
@@ -341,14 +342,13 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
           ),
         ),
         const SizedBox(height: 9),
-        const Text(
-          'BUS JAM',
-          style: TextStyle(
-            fontSize: 53,
-            fontWeight: FontWeight.w900,
-            letterSpacing: -3,
-            color: ink,
-            height: 1.1,
+        const SizedBox(
+          height: 67,
+          width: double.infinity,
+          child: UrbanArtwork(
+            'wordmark',
+            key: ValueKey('wordmark'),
+            label: 'BUS JAM',
           ),
         ),
         const SizedBox(height: 7),
@@ -361,7 +361,7 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
           height: 245,
           width: double.infinity,
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(32),
+            borderRadius: BorderRadius.circular(16),
             child: CustomPaint(painter: CityPainter(hero: true)),
           ),
         ),
@@ -419,7 +419,7 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
                                   10,
                                 )
                             ? 'Complete · Come back tomorrow'
-                            : 'A fresh puzzle. A little ritual.',
+                            : 'A new route. Every day.',
                         style: const TextStyle(
                           color: Color(0xFF74847A),
                           fontSize: 12,
@@ -546,7 +546,7 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 17),
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(27),
+                    borderRadius: BorderRadius.circular(16),
                     child: SizedBox(
                       height: boardHeight,
                       child: GameScene(
@@ -596,7 +596,7 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
                             minimumSize: const Size(0, 58),
                             side: const BorderSide(color: Color(0xFFCEDBD0)),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(18),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                           ),
                           child: const Column(
@@ -656,7 +656,7 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
         backgroundColor: Colors.white,
         foregroundColor: ink,
         minimumSize: const Size(0, 58),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -682,20 +682,10 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
             Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: won
-                        ? const Color(0xFFDDF1D8)
-                        : const Color(0xFFFBE0C9),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    won ? Icons.celebration_rounded : Icons.traffic_rounded,
-                    size: 41,
-                    color: won ? teal : const Color(0xFFD38C5B),
-                  ),
+                SizedBox(
+                  width: double.infinity,
+                  height: 132,
+                  child: UrbanArtwork(won ? 'win' : 'fail'),
                 ),
                 const SizedBox(height: 19),
                 Text(
@@ -800,7 +790,7 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
       const Padding(
         padding: EdgeInsets.only(bottom: 18),
         child: Text(
-          'One satisfying little journey at a time.',
+          'Clear the city, one route at a time.',
           style: TextStyle(color: teal),
         ),
       ),
@@ -829,7 +819,7 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
                 foregroundColor: n == c.unlocked ? Colors.white : ink,
                 disabledBackgroundColor: Colors.white.withValues(alpha: .35),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(22),
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
               child: Column(
@@ -967,7 +957,7 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size(0, 52),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
               icon: const Icon(Icons.play_circle_outline_rounded),
