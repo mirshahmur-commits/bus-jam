@@ -77,3 +77,11 @@ Shared persistence and analytics interfaces were reused from Arrow Escape;
 Bus Jam's rules remain independent of Flutter and provider SDKs.
 Original art/audio are included. Nunito is SIL OFL; dependencies retain their
 licenses. See [notices](docs/THIRD_PARTY_NOTICES.md).
+
+## Artwork
+
+The owner-approved urban game style is used for all illustrated subjects, the
+home city, win/fail art, wordmark and platform app icons. Assets are decoded
+once before the first frame and shared by the home scene and gameplay painters.
+Functional UI icons and matching marks remain crisp code/font geometry.
+See [art direction](docs/ART_DIRECTION.md).

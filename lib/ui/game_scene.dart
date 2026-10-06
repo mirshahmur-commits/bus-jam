@@ -166,8 +166,8 @@ class BoardPainter extends CustomPainter {
 
   @override
   void paint(Canvas c, Size s) {
-    rr(c, Offset.zero & s, const Color(0xFFECF1E8), 27);
-    rr(c, Rect.fromLTWH(13, 8, s.width - 26, 62), const Color(0xFFDCE8DF), 19);
+    rr(c, Offset.zero & s, const Color(0xFF454F5C), 27);
+    rr(c, Rect.fromLTWH(13, 8, s.width - 26, 62), const Color(0xFFDCE2E8), 19);
     final visible = min(9, level.passengers.length - board.cursor);
     for (int i = 0; i < visible; i++) {
       final p = layout.person(i);
@@ -191,15 +191,15 @@ class BoardPainter extends CustomPainter {
     rr(
       c,
       Rect.fromLTWH(0, layout.parkY - 14, s.width, layout.busH + 31),
-      const Color(0xFFB8CEC4),
+      const Color(0xFF606D7C),
       0,
     );
     for (int i = 0; i < board.slots; i++) {
       final r = layout.slot(i).inflate(5);
       c.drawRRect(
-        RRect.fromRectAndRadius(r, const Radius.circular(18)),
+        RRect.fromRectAndRadius(r, const Radius.circular(11)),
         Paint()
-          ..color = const Color(0xFFE7EEE3)
+          ..color = const Color(0xFFD6DDE3)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2,
       );
@@ -218,14 +218,14 @@ class BoardPainter extends CustomPainter {
       'BOARDING ZONE  ·  ${board.parked.length}/${board.slots} OCCUPIED',
       Offset(s.width / 2, layout.parkY + layout.busH + 35),
       size: 9,
-      color: ink.withValues(alpha: .55),
+      color: Colors.white.withValues(alpha: .8),
     );
     label(
       c,
       'TAP A FRONT BUS',
       Offset(s.width / 2, layout.depotY - 22),
       size: 10,
-      color: ink.withValues(alpha: .5),
+      color: Colors.white.withValues(alpha: .8),
     );
     final now = layout.positions(board),
         prev = before == null
@@ -258,6 +258,7 @@ class BoardPainter extends CustomPainter {
           '+${board.lanes[lane].length - 4}',
           Offset(layout.depot(lane, 0).center.dx, s.height - 12),
           size: 11,
+          color: Colors.white,
         );
       }
     }

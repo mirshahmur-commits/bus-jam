@@ -1,3 +1,10 @@
+# Urban artwork candidate — validation pending
+
+The approved urban art replaces all illustrated game subjects, the home city,
+wordmark, result illustrations and platform icons. The previous evidence below
+validates the earlier source only. New Actions checks and native screenshots are
+required for this candidate before distribution.
+
 # Bus Jam candidate validation
 
 The implemented Flutter candidate passed automated, business and widget acceptance

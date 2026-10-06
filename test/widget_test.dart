@@ -9,6 +9,7 @@ import 'package:bus_jam/game/model.dart';
 import 'package:bus_jam/platform/progress_store.dart';
 import 'package:bus_jam/platform/monetization.dart';
 import 'package:bus_jam/ui/app.dart';
+import 'package:bus_jam/ui/urban_assets.dart';
 
 import 'fixtures.dart';
 
@@ -49,6 +50,7 @@ Future<void> tap(WidgetTester t, String key) async {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() async {
+    await UrbanAssets.instance.load();
     final loader = FontLoader('Nunito')
       ..addFont(rootBundle.load('assets/fonts/Nunito.ttf'));
     await loader.load();
@@ -57,7 +59,7 @@ void main() {
     t,
   ) async {
     final c = await mount(t, tutorial: true);
-    expect(find.text('BUS JAM'), findsOneWidget);
+    expect(find.byKey(const ValueKey('wordmark')), findsOneWidget);
     await tap(t, 'play');
     expect(find.text('Let’s get everyone home.'), findsOneWidget);
     await tap(t, 'tutorial-done');

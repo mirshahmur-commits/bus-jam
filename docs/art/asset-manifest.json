@@ -1,0 +1,92 @@
+{
+  "style": "urban-game-v1",
+  "tool": "built-in image generation",
+  "date": "2026-10-06",
+  "assets": [
+    {
+      "path": "assets/art/urban/bus-blue.png",
+      "bytes": 198678,
+      "sha256": "b67ff03412ce74b3446b6c2674155c7214197cdf67eac62b34c97e4282ff0941"
+    },
+    {
+      "path": "assets/art/urban/bus-coral.png",
+      "bytes": 191891,
+      "sha256": "aec1355ca9edadca4b6a9f5bb7a95df6c1f3e0d6cac575fe63c1832dd0b98807"
+    },
+    {
+      "path": "assets/art/urban/bus-gold.png",
+      "bytes": 196424,
+      "sha256": "ab351889791e4239b007053a39fad39e8773264b1cc23e05635035df7eee9b15"
+    },
+    {
+      "path": "assets/art/urban/bus-mint.png",
+      "bytes": 198260,
+      "sha256": "4d8c3e925a2f06b80afe77a698c19402f4f97f7b433d4123f313d866ce40ec3b"
+    },
+    {
+      "path": "assets/art/urban/bus-rose.png",
+      "bytes": 192477,
+      "sha256": "d46486566c52693ff330dbad143ba49635a396d28a0404800847bc8d732f65d6"
+    },
+    {
+      "path": "assets/art/urban/bus-violet.png",
+      "bytes": 196386,
+      "sha256": "59614742807fbb9a6fa00c5a3ae7f00cb8c8bf49463cc176105fa894630c810b"
+    },
+    {
+      "path": "assets/art/urban/city.png",
+      "bytes": 1444194,
+      "sha256": "030028bd2800512fc42ad97466d180ad42a06647d41e322fa2518aed949630f1"
+    },
+    {
+      "path": "assets/art/urban/fail.png",
+      "bytes": 238797,
+      "sha256": "bdb98e9dbb7c12c552fb799d7f5f311d23c1ee59ccf984bb38ed10a613c1698a"
+    },
+    {
+      "path": "assets/art/urban/person-blue.png",
+      "bytes": 181717,
+      "sha256": "96953debceb0a8d0e02e69b8103d16478ecc5dbf5794ef3a5790f2a858b46387"
+    },
+    {
+      "path": "assets/art/urban/person-coral.png",
+      "bytes": 195395,
+      "sha256": "c4cd8346073d517febf0825cceb6cee2d371f754bacf2947f45d6e0c9fcfa40d"
+    },
+    {
+      "path": "assets/art/urban/person-gold.png",
+      "bytes": 197821,
+      "sha256": "aea777d36a8784fc803992707ad9d113e50a28cf0ac74a21f9068383f23fc575"
+    },
+    {
+      "path": "assets/art/urban/person-mint.png",
+      "bytes": 204294,
+      "sha256": "b785671536fd302f4d9ea3501dd45206c679adb4e01ed145952f15c2c04c0eb3"
+    },
+    {
+      "path": "assets/art/urban/person-rose.png",
+      "bytes": 192878,
+      "sha256": "2d38262b2ac8edfcf689f97013b873271962004b35824c7227b323430b1ba409"
+    },
+    {
+      "path": "assets/art/urban/person-violet.png",
+      "bytes": 199922,
+      "sha256": "8ee010f7a4d5e44710c9fbec9bc96cfe2c4999c57862fc8adf49f0b9097b1819"
+    },
+    {
+      "path": "assets/art/urban/win.png",
+      "bytes": 190626,
+      "sha256": "a7b87b6430d7d275120552c588d431d7eaaa0b57222189454577890920177198"
+    },
+    {
+      "path": "assets/branding/icon-1024.png",
+      "bytes": 2156142,
+      "sha256": "8104fc2503b863f23ffa7171759cfb386c82dfaa24820a443035683af9e64315"
+    },
+    {
+      "path": "assets/branding/wordmark.png",
+      "bytes": 283882,
+      "sha256": "e4cce3d54343198a377501f174aa1d7cbc74651cfe181973470e7dc51397cb03"
+    }
+  ]
+}

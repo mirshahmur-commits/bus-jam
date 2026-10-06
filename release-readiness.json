@@ -1,18 +1,18 @@
 {
   "version": "1.0.0+1",
-  "source_sha256": "3ce99297f8f09d622128be8a7ff6b87afa739a80c85989566c3459b181e257c1",
+  "source_sha256": "25ec2332ef8243c8e14f2dd812dc1a3b1b339b25d6ff70381fac76c4ca896b1f",
   "checks": {
     "automated": {
-      "status": "Passed",
-      "evidence": "docs/evidence/github-validation.json"
+      "status": "Not run",
+      "reason": "Urban artwork candidate changed; Actions evidence for this source is pending"
     },
     "business": {
-      "status": "Passed",
-      "evidence": "docs/evidence/github-validation.json"
+      "status": "Not run",
+      "reason": "Urban artwork candidate changed; Actions evidence for this source is pending"
     },
     "ios_uat": {
-      "status": "Passed",
-      "evidence": "docs/evidence/ios-validation.json"
+      "status": "Not run",
+      "reason": "Urban artwork candidate changed; Actions evidence for this source is pending"
     },
     "ios_build": {
       "status": "Not run",
@@ -31,8 +31,8 @@
       "reason": "Owner store metadata and privacy URL required"
     },
     "ios_simulator_build": {
-      "status": "Passed",
-      "evidence": "docs/evidence/ios-validation.json"
+      "status": "Not run",
+      "reason": "Urban artwork candidate changed; Actions evidence for this source is pending"
     }
   }
 }
