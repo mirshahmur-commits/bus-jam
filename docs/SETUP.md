@@ -49,6 +49,11 @@ Repository: `mirshahmur-commits/bus-jam`. iOS first; no owner Mac required.
 
 ## Commands
 
+The pinned `google_mobile_ads` 6 dependency graph requires CocoaPods for all iOS
+plugins. `flutter.config.enable-swift-package-manager: false` in `pubspec.yaml`
+prevents its WebView dependency from being split across native resolvers in both
+Actions and Codemagic. Re-enable SwiftPM when upgrading to a compatible ad plugin.
+
 ```sh
 bash tool/quality_gate.sh
 python3 -m unittest discover -s tool/tests -v

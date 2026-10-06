@@ -43,6 +43,8 @@ from local or mocked tests.
 All tests run in GitHub Actions: Linux for automated/business/widget checks and
 standard macOS for native iPhone simulator acceptance and compilation.
 Native screenshots/reports are capped at 16 MiB and retained for one day.
+The validated native screenshots and outcomes are preserved in
+[`docs/evidence/ios/`](docs/evidence/ios/) and [the test report](docs/TEST_REPORT.md).
 A private repository requires checking free allowance and blocked paid overage.
 Codemagic has one manual workflow, `ios-testflight`: verify successful Actions
 for the exact main commit, prepare signing, build IPA and upload to TestFlight.

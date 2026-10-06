@@ -21,5 +21,6 @@
 - Before hosted CI runs, verify included allowance and blocked paid overage;
   only then set `ZERO_SPEND_CI_READY=true`. Do not add a payment method.
 
-Current milestone: implemented Bus Jam candidate. Local automated and business
-checks are executed; native iOS/sandbox evidence is still a required release gate.
+Current milestone: automated/business/widget and native iPhone simulator checks
+passed in Actions. Signed TestFlight/device and real provider acceptance remain
+required for App Store release.

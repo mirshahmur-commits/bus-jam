@@ -13,10 +13,11 @@ iOS simulator execution, run in GitHub Actions; Codemagic only builds TestFlight
 | UAT-06 | Partial play → background/save → relaunch | Exact passenger cursor, bus state and undo/progress restored |
 | UAT-07 | 320×568, 375×667, 390×844, 430×932, 768×1024 | No overflow/exceptions; controls scroll into view; settings remain readable |
 | UAT-08 | Win/replay/daily same day | No duplicate campaign/daily coin award |
-| UAT-09 | Native purchase → cancel/pending/restore/revoke | Grant only verified entitlement, localized price; correct restoration |
-| UAT-10 | Native rewarded: full/close/fail/offline | Earned callback grants once; all unsuccessful paths grant zero |
-| UAT-11 | Native consent/privacy choices | Requests only when UMP permits; privacy controls reopen appropriately |
-| UAT-12 | Remove Ads → play past ad cadence | Automatic ads suppressed; optional rewarded path retained |
+| UAT-09 | Open settings while store price is pending → toggle motion → price returns | Settings open immediately; toggle works; price updates in the same sheet |
+| UAT-10 | Native purchase → cancel/pending/restore/revoke | Grant only verified entitlement, localized price; correct restoration |
+| UAT-11 | Native rewarded: full/close/fail/offline | Earned callback grants once; all unsuccessful paths grant zero |
+| UAT-12 | Native consent/privacy choices | Requests only when UMP permits; privacy controls reopen appropriately |
+| UAT-13 | Remove Ads → play past ad cadence | Automatic ads suppressed; optional rewarded path retained |
 
 Native run: `tool/run_ios_uat.sh` + `integration_test/app_test.dart`, with actual
 screenshots via integration driver. The scripted native journey uses a deterministic

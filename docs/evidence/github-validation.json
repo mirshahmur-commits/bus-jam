@@ -1,15 +1,15 @@
 {
   "status": "Passed",
-  "commit": "541997f9e74f265a6b67bda2c790f91c408f4407",
-  "source_sha256": "7efd3401c6b0e64c7a5b1a8d2a774f5b51bb323a90eb4da0091616921132a769",
-  "workflow_run": 37469811952,
-  "workflow_url": "https://github.com/mirshahmur-commits/bus-jam/actions/runs/37469811952",
+  "commit": "9b1e4de1467dc6a0b5e85391b740f00a8f3472e8",
+  "source_sha256": "3ce99297f8f09d622128be8a7ff6b87afa739a80c85989566c3459b181e257c1",
+  "workflow_run": 37481404577,
+  "workflow_url": "https://github.com/mirshahmur-commits/bus-jam/actions/runs/37481404577",
   "platform": "Ubuntu 24.04.5",
   "flutter": "3.47.6",
   "dart": "3.13.5",
-  "automated_tests": 58,
+  "automated_tests": 59,
   "test_groups": {
-    "widget_test.dart": 11,
+    "widget_test.dart": 12,
     "screenshot_test.dart": 1,
     "game_rules_test.dart": 15,
     "controller_test.dart": 27,
@@ -24,8 +24,8 @@
     "witnessMoves": 149839,
     "independentSolverLevels": 300,
     "generatorVersion": 1,
-    "elapsedMs": 7909,
-    "utc": "2026-10-06T13:20:44.592711Z"
+    "elapsedMs": 8332,
+    "utc": "2026-10-06T14:45:40.936273Z"
   },
   "tests": [
     {
@@ -49,22 +49,17 @@
       "file": "widget_test.dart"
     },
     {
+      "name": "UAT-09 settings stay usable while store price is pending",
+      "result": "success",
+      "file": "widget_test.dart"
+    },
+    {
       "name": "UAT-04 daily preserves campaign and routes enforce locks",
       "result": "success",
       "file": "widget_test.dart"
     },
     {
       "name": "UAT-05 unavailable video leaves coins and state untouched",
-      "result": "success",
-      "file": "widget_test.dart"
-    },
-    {
-      "name": "UAT-06 lifecycle flushes save; relaunch restores exact progress",
-      "result": "success",
-      "file": "widget_test.dart"
-    },
-    {
-      "name": "UAT-07 layout 320.0x568.0",
       "result": "success",
       "file": "widget_test.dart"
     },
@@ -124,14 +119,24 @@
       "file": "game_rules_test.dart"
     },
     {
-      "name": "UAT-07 layout 375.0x667.0",
+      "name": "BR-12 saves reject duplicate buses, reordered lanes and broken conservation",
+      "result": "success",
+      "file": "game_rules_test.dart"
+    },
+    {
+      "name": "UAT-06 lifecycle flushes save; relaunch restores exact progress",
       "result": "success",
       "file": "widget_test.dart"
     },
     {
-      "name": "BR-12 saves reject duplicate buses, reordered lanes and broken conservation",
+      "name": "UAT-07 layout 320.0x568.0",
       "result": "success",
-      "file": "game_rules_test.dart"
+      "file": "widget_test.dart"
+    },
+    {
+      "name": "UAT-07 layout 375.0x667.0",
+      "result": "success",
+      "file": "widget_test.dart"
     },
     {
       "name": "UAT-07 layout 390.0x844.0",
@@ -140,11 +145,6 @@
     },
     {
       "name": "UAT-07 layout 430.0x932.0",
-      "result": "success",
-      "file": "widget_test.dart"
-    },
-    {
-      "name": "UAT-07 layout 768.0x1024.0",
       "result": "success",
       "file": "widget_test.dart"
     },
@@ -162,6 +162,11 @@
       "name": "BR-15 daily is stable on same date and changes next day",
       "result": "success",
       "file": "game_rules_test.dart"
+    },
+    {
+      "name": "UAT-07 layout 768.0x1024.0",
+      "result": "success",
+      "file": "widget_test.dart"
     },
     {
       "name": "BR-16 first launch starts route 1 with 150 coins",
@@ -269,6 +274,11 @@
       "file": "controller_test.dart"
     },
     {
+      "name": "BR-38 durable analytics retains first install and days across sessions",
+      "result": "success",
+      "file": "platform_test.dart"
+    },
+    {
       "name": "BR-32 unavailable never grants purchase entitlement",
       "result": "success",
       "file": "controller_test.dart"
@@ -294,19 +304,14 @@
       "file": "controller_test.dart"
     },
     {
-      "name": "BR-37 offline ads/store preserve playability",
-      "result": "success",
-      "file": "controller_test.dart"
-    },
-    {
-      "name": "BR-38 durable analytics retains first install and days across sessions",
-      "result": "success",
-      "file": "platform_test.dart"
-    },
-    {
       "name": "BR-39 failed saves report error while game remains usable",
       "result": "success",
       "file": "platform_test.dart"
+    },
+    {
+      "name": "BR-37 offline ads/store preserve playability",
+      "result": "success",
+      "file": "controller_test.dart"
     },
     {
       "name": "BR-40 racing mutations serialize writes and latest save wins",
@@ -319,7 +324,11 @@
       "file": "platform_test.dart"
     }
   ],
-  "native_ios": "Not run",
+  "native_ios": "Passed (simulator)",
   "real_ads": "Not run",
-  "storekit_sandbox": "Not run"
+  "storekit_sandbox": "Not run",
+  "quality_job": 112330164519,
+  "ci_gate_tests": 8,
+  "execution_commit": "572839dbe6be5ae72f7c2a14958141df089c6180",
+  "native_evidence": "docs/evidence/ios-validation.json"
 }
