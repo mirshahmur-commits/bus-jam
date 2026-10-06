@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:bus_jam/game/controller.dart';
 import 'package:bus_jam/game/engine.dart';
@@ -7,6 +8,7 @@ import 'package:bus_jam/game/model.dart';
 import 'package:bus_jam/platform/analytics.dart';
 import 'package:bus_jam/platform/monetization.dart';
 import 'package:bus_jam/platform/progress_store.dart';
+
 import 'fixtures.dart';
 
 class FakeAds extends OfflineAds {

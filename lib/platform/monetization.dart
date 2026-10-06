@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+
 import 'analytics.dart';
 
 enum AdOutcome { rewarded, dismissed, unavailable, error }
@@ -30,7 +31,11 @@ class OfflineAds implements AdsPort {
 /// UMP must authorize ad requests before the Mobile Ads SDK is initialized.
 /// Unit IDs are injected at build time; release never silently uses sample IDs.
 class AdMobAds implements AdsPort {
-  AdMobAds({required this.rewardedId, required this.interstitialId, this.analytics});
+  AdMobAds({
+    required this.rewardedId,
+    required this.interstitialId,
+    this.analytics,
+  });
   final AnalyticsPort? analytics;
   final String rewardedId, interstitialId;
   bool _ready = false, _busy = false, _disposed = false;
@@ -86,9 +91,17 @@ class AdMobAds implements AdsPort {
               return;
             }
             _rewarded = ad;
-            ad.onPaidEvent = (ad, value, precision, currency) { analytics?.track('ad_revenue', {'micros': value, 'currency': currency, 'precision': precision.name}); };
+            ad.onPaidEvent = (ad, value, precision, currency) {
+              analytics?.track('ad_revenue', {
+                'micros': value,
+                'currency': currency,
+                'precision': precision.name,
+              });
+            };
             ad.fullScreenContentCallback = FullScreenContentCallback(
-              onAdShowedFullScreenContent: (_) { analytics?.track('ad_impression', {'format': 'rewarded'}); },
+              onAdShowedFullScreenContent: (_) {
+                analytics?.track('ad_impression', {'format': 'rewarded'});
+              },
               onAdDismissedFullScreenContent: (ad) {
                 ad.dispose();
                 _rewarded = null;
@@ -149,7 +162,13 @@ class AdMobAds implements AdsPort {
               return;
             }
             _interstitial = ad;
-            ad.onPaidEvent = (ad, value, precision, currency) { analytics?.track('ad_revenue', {'micros': value, 'currency': currency, 'precision': precision.name}); };
+            ad.onPaidEvent = (ad, value, precision, currency) {
+              analytics?.track('ad_revenue', {
+                'micros': value,
+                'currency': currency,
+                'precision': precision.name,
+              });
+            };
             ad.fullScreenContentCallback = FullScreenContentCallback(
               onAdDismissedFullScreenContent: (ad) {
                 ad.dispose();
@@ -305,5 +324,9 @@ AdsPort defaultAds([AnalyticsPort? analytics]) {
   const interstitial = String.fromEnvironment('ADMOB_INTERSTITIAL_ID');
   return reward.isEmpty
       ? OfflineAds()
-      : AdMobAds(rewardedId: reward, interstitialId: interstitial, analytics: analytics);
+      : AdMobAds(
+          rewardedId: reward,
+          interstitialId: interstitial,
+          analytics: analytics,
+        );
 }

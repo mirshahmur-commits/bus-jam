@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'dart:math';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:bus_jam/game/engine.dart';
 import 'package:bus_jam/game/generator.dart';
 import 'package:bus_jam/game/model.dart';
+
 import 'fixtures.dart';
 
 void main() {
@@ -171,25 +173,18 @@ void main() {
       throwsFormatException,
     );
   });
-  test(
-    'BR-12 saves reject duplicate buses, reordered lanes and broken conservation',
-    () {
-      final l = trafficFixture(), b = Board.initial(trafficFixture());
-      for (final change in ['cursor', 'moves', 'slots', 'lanes']) {
-        final j = jsonDecode(jsonEncode(b.toJson())) as Map<String, dynamic>;
-        if (change == 'lanes') {
-          (j['lanes'][0] as List).removeAt(1);
-        } else {
-          j[change] = (j[change] as int) + 1;
-        }
-        expect(
-          () => Board.fromJson(j, l),
-          throwsFormatException,
-          reason: change,
-        );
+  test('BR-12 saves reject duplicate buses, reordered lanes and broken conservation', () {
+    final l = trafficFixture(), b = Board.initial(trafficFixture());
+    for (final change in ['cursor', 'moves', 'slots', 'lanes']) {
+      final j = jsonDecode(jsonEncode(b.toJson())) as Map<String, dynamic>;
+      if (change == 'lanes') {
+        (j['lanes'][0] as List).removeAt(1);
+      } else {
+        j[change] = (j[change] as int) + 1;
       }
-    },
-  );
+      expect(() => Board.fromJson(j, l), throwsFormatException, reason: change);
+    }
+  });
   test(
     'BR-13 deterministic generator + witness + roundtrip across 1000 levels',
     () {

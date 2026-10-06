@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -9,6 +10,7 @@ import 'package:bus_jam/game/engine.dart';
 import 'package:bus_jam/game/model.dart';
 import 'package:bus_jam/platform/progress_store.dart';
 import 'package:bus_jam/ui/app.dart';
+
 import 'fixtures.dart';
 
 void main() {
@@ -49,9 +51,8 @@ void main() {
         final data = await image.toByteData(format: ui.ImageByteFormat.png);
         image.dispose();
         await Directory('docs/evidence/screens').create(recursive: true);
-        await File(
-          'docs/evidence/screens/$name.png',
-        ).writeAsBytes(data!.buffer.asUint8List());
+        await File('docs/evidence/screens/$name.png')
+            .writeAsBytes(data!.buffer.asUint8List());
       });
     }
 

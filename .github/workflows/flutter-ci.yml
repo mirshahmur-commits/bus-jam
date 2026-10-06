@@ -27,6 +27,7 @@ jobs:
         # Temporary diagnostics while local Dart execution is unavailable.
         # The next candidate removes this normalization after applying its diff.
         run: |
+          flutter pub get --enforce-lockfile
           dart format lib test integration_test tool test_driver
           git diff
           bash tool/quality_gate.sh
