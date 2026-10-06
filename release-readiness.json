@@ -1,0 +1,34 @@
+{
+  "version": "1.0.0+1",
+  "source_sha256": "7efd3401c6b0e64c7a5b1a8d2a774f5b51bb323a90eb4da0091616921132a769",
+  "checks": {
+    "automated": {
+      "status": "Passed",
+      "evidence": "docs/evidence/github-validation.json"
+    },
+    "business": {
+      "status": "Passed",
+      "evidence": "docs/evidence/github-validation.json"
+    },
+    "ios_uat": {
+      "status": "Not run",
+      "reason": "No macOS simulator or device session available here; Codemagic owner connection required"
+    },
+    "ios_build": {
+      "status": "Not run",
+      "reason": "Native Codemagic workflow has not been executed"
+    },
+    "storekit_sandbox": {
+      "status": "Not run",
+      "reason": "App Store product/account configuration required"
+    },
+    "admob_test_device": {
+      "status": "Not run",
+      "reason": "Native test-device and consent verification required"
+    },
+    "privacy_store_metadata": {
+      "status": "Not run",
+      "reason": "Owner store metadata and privacy URL required"
+    }
+  }
+}

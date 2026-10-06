@@ -1,0 +1,325 @@
+{
+  "status": "Passed",
+  "commit": "541997f9e74f265a6b67bda2c790f91c408f4407",
+  "source_sha256": "7efd3401c6b0e64c7a5b1a8d2a774f5b51bb323a90eb4da0091616921132a769",
+  "workflow_run": 37469811952,
+  "workflow_url": "https://github.com/mirshahmur-commits/bus-jam/actions/runs/37469811952",
+  "platform": "Ubuntu 24.04.5",
+  "flutter": "3.47.6",
+  "dart": "3.13.5",
+  "automated_tests": 58,
+  "test_groups": {
+    "widget_test.dart": 11,
+    "screenshot_test.dart": 1,
+    "game_rules_test.dart": 15,
+    "controller_test.dart": 27,
+    "platform_test.dart": 4
+  },
+  "formatting": "Passed",
+  "static_analysis": "Passed",
+  "web_release_build": "Passed",
+  "generator": {
+    "status": "Passed",
+    "levels": 10000,
+    "witnessMoves": 149839,
+    "independentSolverLevels": 300,
+    "generatorVersion": 1,
+    "elapsedMs": 7909,
+    "utc": "2026-10-06T13:20:44.592711Z"
+  },
+  "tests": [
+    {
+      "name": "UAT-01 first launch, onboarding, first route win, next",
+      "result": "success",
+      "file": "widget_test.dart"
+    },
+    {
+      "name": "UAT-02 fail, paid continue, victory through real taps",
+      "result": "success",
+      "file": "widget_test.dart"
+    },
+    {
+      "name": "UAT visual evidence: home, gameplay, win, fail, settings",
+      "result": "success",
+      "file": "screenshot_test.dart"
+    },
+    {
+      "name": "UAT-03 paid hint, undo, restart and settings",
+      "result": "success",
+      "file": "widget_test.dart"
+    },
+    {
+      "name": "UAT-04 daily preserves campaign and routes enforce locks",
+      "result": "success",
+      "file": "widget_test.dart"
+    },
+    {
+      "name": "UAT-05 unavailable video leaves coins and state untouched",
+      "result": "success",
+      "file": "widget_test.dart"
+    },
+    {
+      "name": "UAT-06 lifecycle flushes save; relaunch restores exact progress",
+      "result": "success",
+      "file": "widget_test.dart"
+    },
+    {
+      "name": "UAT-07 layout 320.0x568.0",
+      "result": "success",
+      "file": "widget_test.dart"
+    },
+    {
+      "name": "BR-01 only lane front releases; source state stays immutable",
+      "result": "success",
+      "file": "game_rules_test.dart"
+    },
+    {
+      "name": "BR-02 mismatching bus waits; no passenger skips queue",
+      "result": "success",
+      "file": "game_rules_test.dart"
+    },
+    {
+      "name": "BR-03 exact capacity boards and departs; frees parking",
+      "result": "success",
+      "file": "game_rules_test.dart"
+    },
+    {
+      "name": "BR-04 multiple parked buses board automatically when queue unblocks",
+      "result": "success",
+      "file": "game_rules_test.dart"
+    },
+    {
+      "name": "BR-05 all slots blocked triggers fail; failed board rejects release",
+      "result": "success",
+      "file": "game_rules_test.dart"
+    },
+    {
+      "name": "BR-06 one continue adds a slot and solves a real failed state",
+      "result": "success",
+      "file": "game_rules_test.dart"
+    },
+    {
+      "name": "BR-07 victory requires every passenger and bus; won state is terminal",
+      "result": "success",
+      "file": "game_rules_test.dart"
+    },
+    {
+      "name": "BR-08 invalid lanes and empty lanes never mutate",
+      "result": "success",
+      "file": "game_rules_test.dart"
+    },
+    {
+      "name": "BR-09 hint solves current board and detects dead ends",
+      "result": "success",
+      "file": "game_rules_test.dart"
+    },
+    {
+      "name": "BR-10 mixed passenger colors fill partially before departure",
+      "result": "success",
+      "file": "game_rules_test.dart"
+    },
+    {
+      "name": "BR-11 seats and passenger totals reject malformed content",
+      "result": "success",
+      "file": "game_rules_test.dart"
+    },
+    {
+      "name": "UAT-07 layout 375.0x667.0",
+      "result": "success",
+      "file": "widget_test.dart"
+    },
+    {
+      "name": "BR-12 saves reject duplicate buses, reordered lanes and broken conservation",
+      "result": "success",
+      "file": "game_rules_test.dart"
+    },
+    {
+      "name": "UAT-07 layout 390.0x844.0",
+      "result": "success",
+      "file": "widget_test.dart"
+    },
+    {
+      "name": "UAT-07 layout 430.0x932.0",
+      "result": "success",
+      "file": "widget_test.dart"
+    },
+    {
+      "name": "UAT-07 layout 768.0x1024.0",
+      "result": "success",
+      "file": "widget_test.dart"
+    },
+    {
+      "name": "BR-13 deterministic generator + witness + roundtrip across 1000 levels",
+      "result": "success",
+      "file": "game_rules_test.dart"
+    },
+    {
+      "name": "BR-14 random legal play conserves every seat and passenger",
+      "result": "success",
+      "file": "game_rules_test.dart"
+    },
+    {
+      "name": "BR-15 daily is stable on same date and changes next day",
+      "result": "success",
+      "file": "game_rules_test.dart"
+    },
+    {
+      "name": "BR-16 first launch starts route 1 with 150 coins",
+      "result": "success",
+      "file": "controller_test.dart"
+    },
+    {
+      "name": "BR-17 first completion awards exactly 25 coins, replay cannot farm",
+      "result": "success",
+      "file": "controller_test.dart"
+    },
+    {
+      "name": "BR-18 next only after victory; locked selection ignored",
+      "result": "success",
+      "file": "controller_test.dart"
+    },
+    {
+      "name": "BR-19 genuine hint costs 25 without moving a bus",
+      "result": "success",
+      "file": "controller_test.dart"
+    },
+    {
+      "name": "BR-20 insufficient coins leaves state untouched",
+      "result": "success",
+      "file": "controller_test.dart"
+    },
+    {
+      "name": "BR-21 undo rolls back passengers, bus and moves exactly",
+      "result": "success",
+      "file": "controller_test.dart"
+    },
+    {
+      "name": "BR-22 restart preserves currency and deterministic board",
+      "result": "success",
+      "file": "controller_test.dart"
+    },
+    {
+      "name": "BR-23 extra slot once per attempt; undo retains entitlement",
+      "result": "success",
+      "file": "controller_test.dart"
+    },
+    {
+      "name": "BR-24 ad dismissed grants no reward or debit",
+      "result": "success",
+      "file": "controller_test.dart"
+    },
+    {
+      "name": "BR-24 ad unavailable grants no reward or debit",
+      "result": "success",
+      "file": "controller_test.dart"
+    },
+    {
+      "name": "BR-24 ad error grants no reward or debit",
+      "result": "success",
+      "file": "controller_test.dart"
+    },
+    {
+      "name": "BR-25 rewarded video grants one free assist",
+      "result": "success",
+      "file": "controller_test.dart"
+    },
+    {
+      "name": "BR-26 overlapping taps cannot double request, reward or move",
+      "result": "success",
+      "file": "controller_test.dart"
+    },
+    {
+      "name": "BR-27 save restores board, history, coins and settings",
+      "result": "success",
+      "file": "controller_test.dart"
+    },
+    {
+      "name": "BR-28 corrupt save recovers safely",
+      "result": "success",
+      "file": "controller_test.dart"
+    },
+    {
+      "name": "BR-29 completed save cannot award again at launch",
+      "result": "success",
+      "file": "controller_test.dart"
+    },
+    {
+      "name": "BR-30 daily reward once per date; campaign preserved; consecutive streak",
+      "result": "success",
+      "file": "controller_test.dart"
+    },
+    {
+      "name": "BR-31 expired daily earns no current-date reward",
+      "result": "success",
+      "file": "controller_test.dart"
+    },
+    {
+      "name": "BR-32 cancelled never grants purchase entitlement",
+      "result": "success",
+      "file": "controller_test.dart"
+    },
+    {
+      "name": "BR-32 pending never grants purchase entitlement",
+      "result": "success",
+      "file": "controller_test.dart"
+    },
+    {
+      "name": "BR-32 error never grants purchase entitlement",
+      "result": "success",
+      "file": "controller_test.dart"
+    },
+    {
+      "name": "BR-32 unavailable never grants purchase entitlement",
+      "result": "success",
+      "file": "controller_test.dart"
+    },
+    {
+      "name": "BR-33 verified purchase and restore/revocation semantics",
+      "result": "success",
+      "file": "controller_test.dart"
+    },
+    {
+      "name": "BR-34 interstitial grace, cadence, cooldown and removal",
+      "result": "success",
+      "file": "controller_test.dart"
+    },
+    {
+      "name": "BR-35 config cannot remove retention protections",
+      "result": "success",
+      "file": "controller_test.dart"
+    },
+    {
+      "name": "BR-36 analytics records funnel and lifecycle without PII",
+      "result": "success",
+      "file": "controller_test.dart"
+    },
+    {
+      "name": "BR-37 offline ads/store preserve playability",
+      "result": "success",
+      "file": "controller_test.dart"
+    },
+    {
+      "name": "BR-38 durable analytics retains first install and days across sessions",
+      "result": "success",
+      "file": "platform_test.dart"
+    },
+    {
+      "name": "BR-39 failed saves report error while game remains usable",
+      "result": "success",
+      "file": "platform_test.dart"
+    },
+    {
+      "name": "BR-40 racing mutations serialize writes and latest save wins",
+      "result": "success",
+      "file": "platform_test.dart"
+    },
+    {
+      "name": "BR-41 interstitial exception cannot trap player on win screen",
+      "result": "success",
+      "file": "platform_test.dart"
+    }
+  ],
+  "native_ios": "Not run",
+  "real_ads": "Not run",
+  "storekit_sandbox": "Not run"
+}
