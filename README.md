@@ -40,17 +40,23 @@ from local or mocked tests.
 
 ## GitHub and iOS
 
-GitHub Actions runs on standard Ubuntu for this **public** repository. No Actions
-artifact upload or cache is configured. A private repository requires checking
-free allowance and blocked paid overage before `ZERO_SPEND_CI_READY=true`.
-Codemagic workflows are manual and use personal-account M2 free minutes only.
+All tests run in GitHub Actions: Linux for automated/business/widget checks and
+standard macOS for native iPhone simulator acceptance and compilation.
+Native screenshots/reports are capped at 16 MiB and retained for one day.
+The validated native screenshots and outcomes are preserved in
+[`docs/evidence/ios/`](docs/evidence/ios/) and [the test report](docs/TEST_REPORT.md).
+A private repository requires checking free allowance and blocked paid overage.
+Codemagic has one manual workflow, `ios-testflight`: verify successful Actions
+for the exact main commit, prepare signing, build IPA and upload to TestFlight.
+It runs no tests and uses personal-account M2 included minutes only.
 See [setup](docs/SETUP.md). Credentials never belong in this repository.
 
 Bundle ID: `com.systemcraft.busJam`.
 StoreKit product: `com.systemcraft.busJam.remove_ads` (non-consumable).
 The committed AdMob app IDs are Google's sample IDs; ad units are unset by default.
 Real monetization requires account configuration and native test-device/sandbox QA.
-`tool/release_gate.py` blocks store distribution while those checks are missing.
+The signed internal TestFlight candidate enables those subsequent checks.
+`tool/release_gate.py` blocks App Store release while their evidence is missing.
 Android has shared gameplay/UI sources, but its billing adapter/release QA is a
 future Android delivery task. This candidate is **not cleared for App Store release**.
 

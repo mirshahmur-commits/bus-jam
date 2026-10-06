@@ -1,0 +1,78 @@
+{
+  "status": "Passed",
+  "commit": "9b1e4de1467dc6a0b5e85391b740f00a8f3472e8",
+  "execution_commit": "572839dbe6be5ae72f7c2a14958141df089c6180",
+  "source_sha256": "3ce99297f8f09d622128be8a7ff6b87afa739a80c85989566c3459b181e257c1",
+  "native_prebuild_sha256": "767e98b86352e985b9eed7a0aa11864753633e8df9710ec145148ddd19a92b3e",
+  "native_configuration": "Flutter pub get prepends the standard CocoaPods includes to Debug.xcconfig and Release.xcconfig. Reproducing only these two additions gives the exact observed native prebuild hash.",
+  "workflow_run": 37481404577,
+  "workflow_url": "https://github.com/mirshahmur-commits/bus-jam/actions/runs/37481404577",
+  "job": 112331418486,
+  "platform": "macOS 15.7.9 ARM64",
+  "xcode": "16.4 (16F6)",
+  "device": "iPhone 16 Pro simulator",
+  "flutter": "3.47.6",
+  "native_journeys": 1,
+  "normal_simulator_build": "Passed",
+  "artifact_id": 11422621157,
+  "artifact_sha256": "10a03234f441f078b5d22f487cbdcf5bda0b8ae21f1382afabdb1eaf822d7364",
+  "report": {
+    "screenshots": [
+      {
+        "name": "native-home",
+        "bytes": 843967
+      },
+      {
+        "name": "native-game",
+        "bytes": 684813
+      },
+      {
+        "name": "native-win",
+        "bytes": 408852
+      },
+      {
+        "name": "native-fail",
+        "bytes": 399928
+      },
+      {
+        "name": "native-settings",
+        "bytes": 349098
+      }
+    ],
+    "version": "1.0.0+1",
+    "journey": "Passed",
+    "nativePlatform": true,
+    "sandboxPayments": "Not run",
+    "realAds": "Not run"
+  },
+  "screenshots": [
+    {
+      "path": "docs/evidence/ios/native-home.png",
+      "sha256": "5b6f19e4748429434eeaaefc97b439c738aad8ab74da03b93cced075951d135c",
+      "bytes": 843967
+    },
+    {
+      "path": "docs/evidence/ios/native-game.png",
+      "sha256": "db396cf9f5b7ec7149876de1359ac3474a93fdec946cff277e86fcf35c53fb3f",
+      "bytes": 684813
+    },
+    {
+      "path": "docs/evidence/ios/native-win.png",
+      "sha256": "38f8db01ddf591aab70319003e9ba9605bbdfa1f4600996df403616a8123151a",
+      "bytes": 408852
+    },
+    {
+      "path": "docs/evidence/ios/native-fail.png",
+      "sha256": "ffb2fa2eaf8bfa8c0efb21b8ee95f85f65c75d85bf952dac41bc1ef5be0aa260",
+      "bytes": 399928
+    },
+    {
+      "path": "docs/evidence/ios/native-settings.png",
+      "sha256": "43ebf6ffa61a24e7806e3441af277dc3c1ca49c75e8002a281d910498527bc18",
+      "bytes": 349098
+    }
+  ],
+  "signed_testflight_build": "Not run",
+  "storekit_sandbox": "Not run",
+  "real_ads": "Not run"
+}

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -5,20 +7,28 @@ import 'package:bus_jam/game/controller.dart';
 import 'package:bus_jam/game/engine.dart';
 import 'package:bus_jam/game/model.dart';
 import 'package:bus_jam/platform/progress_store.dart';
+import 'package:bus_jam/platform/monetization.dart';
 import 'package:bus_jam/ui/app.dart';
 
 import 'fixtures.dart';
+
+class PendingPriceStore extends OfflinePurchases {
+  final result = Completer<String?>();
+  @override
+  Future<String?> price() => result.future;
+}
 
 Future<GameController> mount(
   WidgetTester t, {
   Size size = const Size(390, 844),
   bool tutorial = false,
+  PurchasesPort? purchases,
 }) async {
   t.view.physicalSize = size;
   t.view.devicePixelRatio = 1;
   addTearDown(t.view.resetPhysicalSize);
   addTearDown(t.view.resetDevicePixelRatio);
-  final c = GameController(store: MemoryProgressStore());
+  final c = GameController(store: MemoryProgressStore(), purchases: purchases);
   await c.load();
   if (!tutorial) {
     c.finishOnboarding();
@@ -102,6 +112,20 @@ void main() {
     expect(c.sound, true);
     await tap(t, 'motion-toggle');
     expect(c.reducedMotion, true);
+    expect(t.takeException(), isNull);
+  });
+  testWidgets('UAT-09 settings stay usable while store price is pending', (
+    t,
+  ) async {
+    final store = PendingPriceStore();
+    final c = await mount(t, purchases: store);
+    await tap(t, 'settings');
+    expect(find.text('Checking store price…'), findsOneWidget);
+    await tap(t, 'motion-toggle');
+    expect(c.reducedMotion, true);
+    store.result.complete('1.99 USD');
+    await t.pumpAndSettle();
+    expect(find.text('1.99 USD'), findsOneWidget);
     expect(t.takeException(), isNull);
   });
   testWidgets('UAT-04 daily preserves campaign and routes enforce locks', (

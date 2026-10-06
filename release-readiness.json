@@ -1,6 +1,6 @@
 {
   "version": "1.0.0+1",
-  "source_sha256": "7efd3401c6b0e64c7a5b1a8d2a774f5b51bb323a90eb4da0091616921132a769",
+  "source_sha256": "3ce99297f8f09d622128be8a7ff6b87afa739a80c85989566c3459b181e257c1",
   "checks": {
     "automated": {
       "status": "Passed",
@@ -11,12 +11,12 @@
       "evidence": "docs/evidence/github-validation.json"
     },
     "ios_uat": {
-      "status": "Not run",
-      "reason": "No macOS simulator or device session available here; Codemagic owner connection required"
+      "status": "Passed",
+      "evidence": "docs/evidence/ios-validation.json"
     },
     "ios_build": {
       "status": "Not run",
-      "reason": "Native Codemagic workflow has not been executed"
+      "reason": "Signed Codemagic TestFlight build pending; simulator compilation passed in Actions"
     },
     "storekit_sandbox": {
       "status": "Not run",
@@ -29,6 +29,10 @@
     "privacy_store_metadata": {
       "status": "Not run",
       "reason": "Owner store metadata and privacy URL required"
+    },
+    "ios_simulator_build": {
+      "status": "Passed",
+      "evidence": "docs/evidence/ios-validation.json"
     }
   }
 }

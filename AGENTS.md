@@ -12,11 +12,15 @@
 - Do not use private work-project names in examples or assets.
 - Keep credentials out of git and logs. Do not access instance metadata or other unrelated sensitive sources.
 - No sub-agents are requested for this project.
-- Use GitHub Actions on standard Linux for routine analysis and automated,
-  business-rule/controller/widget tests. Keep iOS simulator/device acceptance
-  and release verification in Codemagic. Never count skipped CI as passing.
+- Run every automated test in GitHub Actions: Linux for analysis, rules,
+  business/controller/widget tests and generation; standard macOS for native
+  iPhone simulator UAT and compilation. Codemagic only signs, builds and uploads
+  to TestFlight after checking successful Actions for the exact main commit.
+  Never count skipped CI as passing. Internal TestFlight enables subsequent
+  real-device StoreKit/AdMob verification; App Store release remains gated.
 - Before hosted CI runs, verify included allowance and blocked paid overage;
   only then set `ZERO_SPEND_CI_READY=true`. Do not add a payment method.
 
-Current milestone: implemented Bus Jam candidate. Local automated and business
-checks are executed; native iOS/sandbox evidence is still a required release gate.
+Current milestone: automated/business/widget and native iPhone simulator checks
+passed in Actions. Signed TestFlight/device and real provider acceptance remain
+required for App Store release.

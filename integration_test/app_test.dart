@@ -78,13 +78,13 @@ void main() {
       expect(restored.reducedMotion, true);
       await shot('native-settings');
       expect(t.takeException(), isNull);
-      binding.reportData = {
+      binding.reportData!.addAll({
         'version': '1.0.0+1',
         'journey': 'Passed',
         'nativePlatform': true,
         'sandboxPayments': 'Not run',
         'realAds': 'Not run',
-      };
+      });
     },
   );
 }
