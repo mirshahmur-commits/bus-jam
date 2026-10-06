@@ -12,11 +12,11 @@
     },
     "ios_uat": {
       "status": "Not run",
-      "reason": "No macOS simulator or device session available here; Codemagic owner connection required"
+      "reason": "Native GitHub Actions simulator job pending validation"
     },
     "ios_build": {
       "status": "Not run",
-      "reason": "Native Codemagic workflow has not been executed"
+      "reason": "Native Actions compilation and signed TestFlight build pending validation"
     },
     "storekit_sandbox": {
       "status": "Not run",

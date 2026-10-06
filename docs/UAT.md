@@ -1,6 +1,7 @@
 # Acceptance journeys and expected outcomes
 
-Local executed outcomes are in TEST_REPORT.md; iOS execution is a separate gate.
+Executed outcomes are in TEST_REPORT.md. All automated journeys, including native
+iOS simulator execution, run in GitHub Actions; Codemagic only builds TestFlight.
 
 | ID | Player action | Expected outcome |
 | --- | --- | --- |

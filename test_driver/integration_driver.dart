@@ -10,13 +10,22 @@ Future<void> main() async {
           final folder = Directory('test-results/ios-screens');
           await folder.create(recursive: true);
           await File('${folder.path}/$name.png').writeAsBytes(image);
-          return true;
+          return image.isNotEmpty;
         },
     responseDataCallback: (data) async {
       await Directory('test-results').create(recursive: true);
+      final summary = Map<String, dynamic>.from(data ?? {});
+      final screenshots = summary['screenshots'] as List<dynamic>? ?? [];
+      summary['screenshots'] = screenshots.map((image) {
+        final shot = image as Map<String, dynamic>;
+        return {
+          'name': shot['screenshotName'],
+          'bytes': (shot['bytes'] as List<dynamic>).length,
+        };
+      }).toList();
       await File(
         'test-results/ios-uat.json',
-      ).writeAsString(const JsonEncoder.withIndent('  ').convert(data));
+      ).writeAsString(const JsonEncoder.withIndent('  ').convert(summary));
     },
   );
 }

@@ -1,31 +1,7 @@
-# Manual workflows. Confirm personal M2 free allowance before setting the guard.
+# Manual internal TestFlight build; all tests execute in GitHub Actions.
 workflows:
-  ios-qa:
-    name: Bus Jam iOS QA
-    instance_type: mac_mini_m2
-    max_build_duration: 30
-    environment:
-      flutter: 3.47.6
-      xcode: latest
-      cocoapods: default
-    scripts:
-      - name: Zero spend guard
-        script: test "${ZERO_SPEND_CI_READY:-false}" = true
-      - name: Dependencies
-        script: flutter pub get --enforce-lockfile
-      - name: Business and automated tests
-        script: bash tool/quality_gate.sh
-        test_report: test-results/flutter.json
-      - name: iOS player journeys and screenshots
-        script: bash tool/run_ios_uat.sh
-      - name: Build simulator candidate
-        script: flutter build ios --simulator --no-pub
-    artifacts:
-      - test-results/**
-      - coverage/lcov.info
-      - build/ios/iphonesimulator/*.app
   ios-testflight:
-    name: Bus Jam verified TestFlight candidate
+    name: Bus Jam TestFlight build
     instance_type: mac_mini_m2
     max_build_duration: 45
     integrations:
@@ -38,29 +14,24 @@ workflows:
         distribution_type: app_store
         bundle_identifier: com.systemcraft.busJam
     scripts:
-      - name: Zero spend and exact candidate gate
+      - name: Confirm free allowance and successful Actions for this commit
         script: |
+          set -euo pipefail
           test "${ZERO_SPEND_CI_READY:-false}" = true
-          python3 tool/release_gate.py
-      - name: Dependencies
+          python3 tool/verify_actions.py
+      - name: Build dependencies
         script: flutter pub get --enforce-lockfile
-      - name: Automated checks
-        script: bash tool/quality_gate.sh
-        test_report: test-results/flutter.json
-      - name: iOS player journeys
-        script: bash tool/run_ios_uat.sh
       - name: Apply signing profiles
         script: xcode-project use-profiles
-      - name: Signed IPA
+      - name: Signed IPA for internal TestFlight
         script: |
           set -euo pipefail
           flutter build ipa --release --no-pub --build-number="$PROJECT_BUILD_NUMBER" \
-            --dart-define="ADMOB_REWARDED_ID=$ADMOB_REWARDED_ID" \
-            --dart-define="ADMOB_INTERSTITIAL_ID=$ADMOB_INTERSTITIAL_ID" \
+            --dart-define="ADMOB_REWARDED_ID=${ADMOB_REWARDED_ID:-}" \
+            --dart-define="ADMOB_INTERSTITIAL_ID=${ADMOB_INTERSTITIAL_ID:-}" \
             --export-options-plist=/Users/builder/export_options.plist
     artifacts:
       - build/ios/ipa/*.ipa
-      - test-results/**
       - /tmp/xcodebuild_logs/*.log
     publishing:
       app_store_connect:

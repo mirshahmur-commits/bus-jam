@@ -6,6 +6,11 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+env:
+  CI: 'true'
+  FLUTTER_SUPPRESS_ANALYTICS: 'true'
+  DART_SUPPRESS_ANALYTICS: 'true'
+  COCOAPODS_DISABLE_STATS: 'true'
 concurrency:
   group: flutter-${{ github.ref }}
   cancel-in-progress: true
@@ -25,6 +30,8 @@ jobs:
           cache: false
       - name: Automated, business, UI acceptance, 10000 generated levels
         run: bash tool/quality_gate.sh
+      - name: Test exact-commit TestFlight gate
+        run: python3 -m unittest discover -s tool/tests -v
       - name: Diagnose formatting after a failed gate
         if: failure()
         run: |
@@ -47,7 +54,7 @@ jobs:
           import json,os
           from pathlib import Path
           with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:
-            f.write('Bus Jam checks. Native iOS and sandbox verification are separate Codemagic gates.\n\n')
+            f.write('Bus Jam: all automated and iOS simulator tests run in Actions. Codemagic builds and uploads TestFlight.\n\n')
             p=Path('docs/evidence/generator.json')
             if p.exists(): f.write('```json\n'+p.read_text()+'\n```\n')
             p=Path('test-results/flutter.json')
@@ -55,4 +62,56 @@ jobs:
               events=[json.loads(x) for x in p.read_text().splitlines() if x.startswith('{')]
               result=next((e for e in reversed(events) if e.get('type')=='done'),None)
               f.write('Flutter result: '+json.dumps(result)+'\n')
+          PY
+  ios_uat:
+    name: iOS simulator acceptance
+    needs: quality
+    if: github.event.repository.private == false || vars.ZERO_SPEND_CI_READY == 'true'
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.6'
+          channel: stable
+          architecture: arm64
+          cache: false
+      - name: Native dependencies and environment
+        run: |
+          flutter pub get --enforce-lockfile
+          xcodebuild -version
+          xcrun simctl list runtimes
+      - name: Native iPhone journeys and screenshots
+        run: bash tool/run_ios_uat.sh
+      - name: Compile normal simulator app
+        run: flutter build ios --simulator --debug --no-pub
+      - name: Bound evidence size
+        if: always()
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          size=sum(p.stat().st_size for p in Path('test-results').rglob('*') if p.is_file())
+          print('Native evidence bytes:',size)
+          assert size <= 16*1024*1024, 'Evidence exceeds the 16 MiB storage bound'
+          PY
+      - name: Preserve native evidence for one day
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-evidence-${{ github.sha }}
+          path: test-results/
+          retention-days: 1
+          if-no-files-found: error
+      - name: Native result in run summary
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:
+            f.write('iPhone simulator UAT. Real StoreKit/AdMob sandbox checks are separate and are never inferred.\n\n')
+            for name in ['ios-source-identity.json','ios-uat.json']:
+              p=Path('test-results')/name
+              if p.exists(): f.write('### '+name+'\n\n```json\n'+p.read_text()+'\n```\n')
           PY

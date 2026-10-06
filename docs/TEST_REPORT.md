@@ -1,7 +1,8 @@
 # Bus Jam candidate validation
 
 The implemented Flutter candidate passed automated, business and widget acceptance
-checks. Native iOS and provider checks remain unexecuted and block store distribution.
+checks. All automated tests now belong to GitHub Actions; native iOS execution
+is being validated there. Provider checks remain separate from simulator tests.
 
 ## Exact validated candidate
 
@@ -59,13 +60,16 @@ and final formatting/import issues. The final workflow passed after corrections.
 
 | Check | Status | Evidence still required |
 | --- | --- | --- |
-| iOS compilation and signed candidate | Not run | Codemagic build for exact candidate |
-| iPhone simulator/device UAT | Not run | Native journeys/screenshots; audio, haptics, lifecycle and performance |
+| iOS simulator compilation | Not run | Native GitHub Actions job for exact candidate |
+| iPhone simulator UAT | Not run | Actions player journey and five screenshots |
+| Signed iPhone candidate/device acceptance | Not run | Codemagic TestFlight build, audio/haptics/lifecycle/performance |
 | StoreKit sandbox | Not run | Verified purchase, cancel, pending, restore and revocation |
 | AdMob test device and consent | Not run | Earned/closed/failed/offline ad flows and UMP choices |
 | Privacy and store metadata | Not run | Owner's privacy URL and App Store declarations |
 | Android billing/release | Not run | Separate later Android delivery |
 
 `release-readiness.json` records Passed only for executed automated/business checks.
-The release gate correctly rejects distribution until the remaining evidence is
-available. Mocked purchases and ads do not establish native provider correctness.
+The full release gate rejects App Store distribution until remaining evidence is
+available. Internal TestFlight uses successful exact-commit Actions as its build
+gate so the signed candidate can be used for subsequent device/provider checks.
+Mocked purchases and ads do not establish native provider correctness.
