@@ -1015,7 +1015,7 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
     ),
   );
   Future<void> settings(BuildContext context) async {
-    final price = await c.purchases.price();
+    final price = c.purchases.price();
     if (!context.mounted) {
       return;
     }
@@ -1077,10 +1077,16 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
               title: Text(
                 c.removeAds ? 'Automatic ads removed' : 'Remove automatic ads',
               ),
-              subtitle: Text(
-                c.removeAds
-                    ? 'Rewarded videos remain optional'
-                    : (price ?? 'Store price is currently unavailable'),
+              subtitle: FutureBuilder<String?>(
+                future: price,
+                builder: (context, snapshot) => Text(
+                  c.removeAds
+                      ? 'Rewarded videos remain optional'
+                      : snapshot.connectionState == ConnectionState.waiting
+                      ? 'Checking store price…'
+                      : (snapshot.data ??
+                            'Store price is currently unavailable'),
+                ),
               ),
               trailing: c.removeAds
                   ? const Icon(Icons.check_circle_rounded, color: teal)

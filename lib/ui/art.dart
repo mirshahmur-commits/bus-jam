@@ -322,7 +322,7 @@ class CityPainter extends CustomPainter {
     for (int i = 0; i < 4; i++) {
       paintPerson(
         c,
-        Offset(w * .32 + i * 23, h * .88),
+        Offset(w * .32 + i * 23, h * (hero ? .78 : .88)),
         BusColor.values[i],
         scale: .85,
       );
