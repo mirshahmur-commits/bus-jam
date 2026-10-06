@@ -1,7 +1,7 @@
 # Bus Jam
 
 A Flutter/Dart color queue puzzle for iOS first, with Android and web sources.
-Original vector buses and people, mint/cream city design, bundled Nunito typography,
+Approved urban game sprites, adult passengers, city artwork and bundled Nunito typography,
 boarding/departure animation, procedural sound, and an offline game engine.
 
 <img src="docs/evidence/screens/01-home.png" width="230" alt="Bus Jam home"> <img src="docs/evidence/screens/02-gameplay.png" width="230" alt="Bus Jam gameplay">
@@ -66,7 +66,7 @@ future Android delivery task. This candidate is **not cleared for App Store rele
 | --- | --- |
 | `lib/game/` | Immutable levels/boards, pure rules, solver, generator, controller |
 | `lib/platform/` | Save adapters, local analytics, ads, StoreKit port, config |
-| `lib/ui/` | Responsive screens and original canvas illustrations/animation |
+| `lib/ui/` | Responsive screens, cached urban sprites and boarding/departure animation |
 | `ios/Runner/AppDelegate.swift` | Verified StoreKit 2 purchase/restore/revocation bridge |
 | `test/` | Explicit expected business outcomes and UI acceptance journeys |
 | `integration_test/` | Native player journey with screenshots |
@@ -75,7 +75,7 @@ future Android delivery task. This candidate is **not cleared for App Store rele
 
 Shared persistence and analytics interfaces were reused from Arrow Escape;
 Bus Jam's rules remain independent of Flutter and provider SDKs.
-Original art/audio are included. Nunito is SIL OFL; dependencies retain their
+Project-generated art and original audio are included. Nunito is SIL OFL; dependencies retain their
 licenses. See [notices](docs/THIRD_PARTY_NOTICES.md).
 
 ## Artwork
