@@ -51,8 +51,9 @@ void main() {
         final data = await image.toByteData(format: ui.ImageByteFormat.png);
         image.dispose();
         await Directory('docs/evidence/screens').create(recursive: true);
-        await File('docs/evidence/screens/$name.png')
-            .writeAsBytes(data!.buffer.asUint8List());
+        await File(
+          'docs/evidence/screens/$name.png',
+        ).writeAsBytes(data!.buffer.asUint8List());
       });
     }
 

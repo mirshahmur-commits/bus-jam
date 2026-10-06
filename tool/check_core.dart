@@ -65,7 +65,8 @@ void main(List<String> args) {
     'utc': DateTime.now().toUtc().toIso8601String(),
   };
   Directory('docs/evidence').createSync(recursive: true);
-  File('docs/evidence/generator.json')
-      .writeAsStringSync(const JsonEncoder.withIndent('  ').convert(result));
+  File(
+    'docs/evidence/generator.json',
+  ).writeAsStringSync(const JsonEncoder.withIndent('  ').convert(result));
   stdout.writeln(jsonEncode(result));
 }

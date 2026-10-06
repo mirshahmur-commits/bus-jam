@@ -14,8 +14,9 @@ Future<void> main() async {
         },
     responseDataCallback: (data) async {
       await Directory('test-results').create(recursive: true);
-      await File('test-results/ios-uat.json')
-          .writeAsString(const JsonEncoder.withIndent('  ').convert(data));
+      await File(
+        'test-results/ios-uat.json',
+      ).writeAsString(const JsonEncoder.withIndent('  ').convert(data));
     },
   );
 }

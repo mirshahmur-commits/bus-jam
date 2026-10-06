@@ -710,7 +710,9 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  won ? 'Everyone’s on their way.\nYou made that look easy.' : 'Parking is full.\nA different order will clear the jam.',
+                  won
+                      ? 'Everyone’s on their way.\nYou made that look easy.'
+                      : 'Parking is full.\nA different order will clear the jam.',
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: Color(0xFF6F8274), height: 1.5),
                 ),

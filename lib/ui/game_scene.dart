@@ -157,6 +157,13 @@ class BoardPainter extends CustomPainter {
   final MoveResult? result;
   final double t;
   final int? hint;
+
+  Rect boardingPosition(int busId) {
+    final oldIndex = before?.parked.indexWhere((bus) => bus.id == busId) ?? -1;
+    final slot = oldIndex >= 0 ? oldIndex : before?.parked.length ?? 0;
+    return layout.slot(slot.clamp(0, board.slots - 1));
+  }
+
   @override
   void paint(Canvas c, Size s) {
     rr(c, Offset.zero & s, const Color(0xFFECF1E8), 27);
@@ -268,12 +275,8 @@ class BoardPainter extends CustomPainter {
     }
     if (t < 1 && result != null && before != null) {
       for (final b in result!.departures) {
-        final start = prev[b.id] ?? layout.slot(0),
-            parking = layout.slot(
-              before!.parked
-                  .indexWhere((v) => v.id == b.id)
-                  .clamp(0, before!.slots - 1),
-            );
+        final parking = boardingPosition(b.id),
+            start = prev[b.id] ?? parking;
         var r = Rect.lerp(
           start,
           parking,
@@ -296,7 +299,7 @@ class BoardPainter extends CustomPainter {
         if (p <= 0 || p >= 1) {
           continue;
         }
-        final target = now[item.busId] ?? layout.slot(0),
+        final target = now[item.busId] ?? boardingPosition(item.busId),
             origin = layout.person(min(8, item.passenger - before!.cursor));
         paintPerson(
           c,
