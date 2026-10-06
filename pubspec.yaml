@@ -19,6 +19,10 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
 flutter:
+  # google_mobile_ads 6 uses CocoaPods and depends on a WebView plugin that also
+  # supports SwiftPM. Keep this pinned dependency graph on one native resolver.
+  config:
+    enable-swift-package-manager: false
   uses-material-design: true
   assets:
     - assets/audio/

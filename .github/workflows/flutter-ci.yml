@@ -87,6 +87,7 @@ jobs:
       - name: Compile normal simulator app
         run: flutter build ios --simulator --debug --no-pub
       - name: Bound evidence size
+        id: evidence_bound
         if: always()
         run: |
           python3 - <<'PY'
@@ -96,7 +97,7 @@ jobs:
           assert size <= 16*1024*1024, 'Evidence exceeds the 16 MiB storage bound'
           PY
       - name: Preserve native evidence for one day
-        if: always()
+        if: always() && steps.evidence_bound.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: ios-evidence-${{ github.sha }}
