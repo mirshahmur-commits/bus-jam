@@ -4,6 +4,8 @@ A Flutter/Dart color queue puzzle for iOS first, with Android and web sources.
 Original vector buses and people, mint/cream city design, bundled Nunito typography,
 boarding/departure animation, procedural sound, and an offline game engine.
 
+<img src="docs/evidence/screens/01-home.png" width="230" alt="Bus Jam home"> <img src="docs/evidence/screens/02-gameplay.png" width="230" alt="Bus Jam gameplay">
+
 ## Play
 
 Tap a **front bus** to send it into the boarding zone. Passengers board in FIFO
