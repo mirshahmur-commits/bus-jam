@@ -6,6 +6,10 @@ import sys
 import tempfile
 import time
 import unittest
+from unittest import mock
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import run_with_timeout
 
 RUNNER = Path(__file__).resolve().parents[1] / "run_with_timeout.py"
 
@@ -22,6 +26,12 @@ class CommandDeadlineTests(unittest.TestCase):
     def test_preserves_failure_code(self):
         result = subprocess.run(self.command(5, "raise SystemExit(37)"), capture_output=True)
         self.assertEqual(result.returncode, 37)
+
+    def test_protected_group_uses_direct_signals_and_keeps_timeout_status(self):
+        code = "import signal,time; signal.signal(signal.SIGTERM,signal.SIG_IGN); time.sleep(30)"
+        with mock.patch.object(run_with_timeout.os, "killpg", side_effect=PermissionError(1, "Operation not permitted")):
+            result = run_with_timeout.run(0.2, [sys.executable, "-c", code])
+        self.assertEqual(result, 124)
 
     def test_timeout_kills_children_that_ignore_term(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -47,3 +57,4 @@ class CommandDeadlineTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

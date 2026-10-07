@@ -37,8 +37,8 @@ trap cleanup EXIT
 printf 'Native UAT device: %s; runtime: %s; SDK: %s\n' "$udid" "$runtime" "$sdk"
 bounded 60 xcrun simctl boot "$udid"
 bounded 180 xcrun simctl bootstatus "$udid" -b
-# Confirm the simulator can answer app-management requests before Flutter drive.
-bounded 60 xcrun simctl listapps "$udid" > test-results/ios-apps.json
+# bootstatus is the readiness barrier; listing every system app can hang on
+# hosted images even after a successful boot. Drive installs only our app.
 bounded 600 flutter drive --verbose --no-pub \
   --driver=test_driver/integration_driver.dart --target=integration_test/app_test.dart \
   --use-application-binary=build/ios/iphonesimulator/Runner.app \
@@ -52,4 +52,5 @@ screens=list(Path('test-results/ios-screens').glob('*.png'))
 assert len(screens) == 5 and all(p.stat().st_size > 0 for p in screens), 'Expected five native screenshots'
 print('Native journey Passed with five screenshots.')
 PY
+
 

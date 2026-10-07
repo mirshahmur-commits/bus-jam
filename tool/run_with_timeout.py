@@ -9,21 +9,35 @@ import time
 
 
 def stop_group(process):
-    try:
-        os.killpg(process.pid, signal.SIGTERM)
-    except ProcessLookupError:
-        return
+    def send(sig):
+        try:
+            os.killpg(process.pid, sig)
+        except ProcessLookupError:
+            pass
+        except PermissionError:
+            # macOS may refuse signals to a protected helper in xcrun's group.
+            # Still stop our own command; never replace timeout/cancellation
+            # with an unrelated cleanup traceback.
+            if process.poll() is None:
+                try:
+                    process.send_signal(sig)
+                except (ProcessLookupError, PermissionError):
+                    pass
+
+    send(signal.SIGTERM)
     # Children can ignore TERM even if their parent has already exited.
     time.sleep(1)
+    send(signal.SIGKILL)
     try:
-        os.killpg(process.pid, signal.SIGKILL)
-    except ProcessLookupError:
-        pass
-    process.wait()
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        print("CI cleanup could not reap a system-managed command", file=sys.stderr, flush=True)
 
 
 def run(seconds, command):
-    print(f"CI stage: {command[0]} (limit {seconds:g}s)", file=sys.stderr, flush=True)
+    # Include the tool's operation, without logging values or command secrets.
+    operation = " ".join(command[:3]) if command[0] == "xcrun" else command[0]
+    print(f"CI stage: {operation} (limit {seconds:g}s)", file=sys.stderr, flush=True)
     process = subprocess.Popen(command, start_new_session=True)
     cancelled = []
     previous = {}
@@ -62,3 +76,4 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
+
