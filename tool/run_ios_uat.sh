@@ -37,11 +37,24 @@ trap cleanup EXIT
 printf 'Native UAT device: %s; runtime: %s; SDK: %s\n' "$udid" "$runtime" "$sdk"
 bounded 60 xcrun simctl boot "$udid"
 bounded 180 xcrun simctl bootstatus "$udid" -b
-# bootstatus is the readiness barrier; listing every system app can hang on
-# hosted images even after a successful boot. Drive installs only our app.
+# Flutter's simulator log reader can miss the VM URL logged during startup
+# (flutter/flutter#181771). Launch once and attach to the owned VM directly.
+bounded 180 xcrun simctl install "$udid" build/ios/iphonesimulator/Runner.app
+vm_port=$(python3 - <<'PY'
+import socket
+with socket.socket() as listener:
+    listener.bind(('127.0.0.1', 0))
+    print(listener.getsockname()[1])
+PY
+)
+bounded 60 xcrun simctl launch "$udid" com.systemcraft.busJam \
+  --enable-dart-profiling --disable-vm-service-publication --start-paused \
+  --enable-checked-mode --verify-entry-points --disable-service-auth-codes \
+  --vm-service-port="$vm_port" 2>&1 | tee test-results/ios-launch.log
+vm_uri=$(bounded 150 python3 tool/wait_vm_service.py "$vm_port" test-results/ios-launch.log)
 bounded 600 flutter drive --verbose --no-pub \
   --driver=test_driver/integration_driver.dart --target=integration_test/app_test.dart \
-  --use-application-binary=build/ios/iphonesimulator/Runner.app \
+  --use-existing-app="$vm_uri" \
   -d "$udid" 2>&1 | tee test-results/ios-drive.log
 python3 - <<'PY'
 import json
@@ -52,5 +65,6 @@ screens=list(Path('test-results/ios-screens').glob('*.png'))
 assert len(screens) == 5 and all(p.stat().st_size > 0 for p in screens), 'Expected five native screenshots'
 print('Native journey Passed with five screenshots.')
 PY
+
 
 
