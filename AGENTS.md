@@ -18,8 +18,11 @@
   to TestFlight after checking successful Actions for the exact main commit.
   Never count skipped CI as passing. Internal TestFlight enables subsequent
   real-device StoreKit/AdMob verification; App Store release remains gated.
-- Before hosted CI runs, verify included allowance and blocked paid overage;
-  only then set `ZERO_SPEND_CI_READY=true`. Do not add a payment method.
+- Codemagic uses the owner's existing free plan and its quota cap. Do not add
+  a manual allowance-confirmation flag or step to Codemagic. Preserve the
+  exact-commit Actions gate. Do not enable paid billing.
+- A private GitHub repository requires checking its included allowance and
+  blocked paid overage before enabling CI.
 
 Current milestone: automated/business/widget and native iPhone simulator checks
 passed in Actions. Signed TestFlight/device and real provider acceptance remain

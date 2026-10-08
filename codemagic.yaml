@@ -16,16 +16,8 @@ workflows:
         distribution_type: app_store
         bundle_identifier: com.systemcraft.busJam
     scripts:
-      - name: Confirm free allowance and successful Actions for this commit
-        script: |
-          set -euo pipefail
-          if [[ "${ZERO_SPEND_CI_READY:-false}" != "true" ]]; then
-            printf '%s\n' \
-              'Build blocked: ZERO_SPEND_CI_READY must be true.' \
-              'After verifying free allowance and blocked paid overage, add it in Codemagic App settings > Environment variables, group bus_jam_build.' >&2
-            exit 1
-          fi
-          python3 tool/verify_actions.py
+      - name: Verify successful GitHub Actions for this commit
+        script: python3 tool/verify_actions.py
       - name: Build dependencies
         script: flutter pub get --enforce-lockfile
       - name: Apply signing profiles
