@@ -23,7 +23,9 @@ void main() {
       Future<void> waitForResult() async {
         final phase = controller().board.phase(controller().level);
         if (phase == GamePhase.playing) return;
-        final result = find.byKey(ValueKey(phase == GamePhase.won ? 'win' : 'fail'));
+        final result = find.byKey(
+          ValueKey(phase == GamePhase.won ? 'win' : 'fail'),
+        );
         // Native pumpAndSettle can finish between motion and the result timer.
         for (int frame = 0; frame < 40 && result.evaluate().isEmpty; frame++) {
           await t.pump(const Duration(milliseconds: 50));
