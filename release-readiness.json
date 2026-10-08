@@ -1,22 +1,28 @@
 {
   "version": "1.1.0+2",
-  "source_sha256": null,
+  "source_sha256": "de55934591b9b2024b0a08fa75dbdb9c8d11b11f463687f8178b5965bcc01e32",
   "checks": {
     "automated": {
-      "status": "Not run",
-      "reason": "Bus Surge 1.1 candidate: exact source evidence is produced by GitHub Actions; previous 1.0 evidence does not certify this redesign."
+      "status": "Passed",
+      "evidence": "docs/evidence/redesign/github-validation.json",
+      "run_id": 37775634596,
+      "candidate_head_sha": "ca3000c7a595d29e984627318073762dabdd1b01"
     },
     "business": {
-      "status": "Not run",
-      "reason": "Bus Surge 1.1 candidate: exact source evidence is produced by GitHub Actions; previous 1.0 evidence does not certify this redesign."
+      "status": "Passed",
+      "evidence": "docs/evidence/redesign/github-validation.json",
+      "run_id": 37775634596,
+      "candidate_head_sha": "ca3000c7a595d29e984627318073762dabdd1b01"
     },
     "ios_uat": {
-      "status": "Not run",
-      "reason": "Bus Surge 1.1 candidate: exact source evidence is produced by GitHub Actions; previous 1.0 evidence does not certify this redesign."
+      "status": "Passed",
+      "evidence": "docs/evidence/redesign/ios-validation.json",
+      "run_id": 37775634596,
+      "candidate_head_sha": "ca3000c7a595d29e984627318073762dabdd1b01"
     },
     "ios_build": {
       "status": "Not run",
-      "reason": "Signed Codemagic TestFlight build pending; simulator compilation passed in Actions"
+      "reason": "Signed Bus Surge 1.1 Codemagic TestFlight build/upload pending; simulator compilation passed in Actions."
     },
     "storekit_sandbox": {
       "status": "Not run",
@@ -31,8 +37,10 @@
       "reason": "Owner store metadata and privacy URL required"
     },
     "ios_simulator_build": {
-      "status": "Not run",
-      "reason": "Bus Surge 1.1 candidate: exact source evidence is produced by GitHub Actions; previous 1.0 evidence does not certify this redesign."
+      "status": "Passed",
+      "evidence": "docs/evidence/redesign/ios-validation.json",
+      "run_id": 37775634596,
+      "candidate_head_sha": "ca3000c7a595d29e984627318073762dabdd1b01"
     },
     "game_center_sandbox": {
       "status": "Not run",

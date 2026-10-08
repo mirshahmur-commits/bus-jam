@@ -7,7 +7,7 @@ iOS simulator execution, run in GitHub Actions; Codemagic only builds TestFlight
 | --- | --- | --- |
 | UAT-01 | First install → Play → onboarding → solve → Next | One short tutorial; legal boarding/departure; win; +25; route 2 |
 | UAT-02 | Release three wrong buses → continue → solve | Full parking produces fail; one extra space for 50; boarding frees spaces; win |
-| UAT-03 | Hint → move → Undo → Restart → settings | Solver-highlighted bus; exact rollback; same fresh board; persisted toggles |
+| UAT-03 | Hint → move → Undo → Restart → settings | Solver-highlighted bus; exact rollback; first undo free; same fresh board; persisted toggles |
 | UAT-04 | Daily → Home → route map → locked route | Campaign survives detour; unavailable routes cannot be tapped |
 | UAT-05 | Request video while provider unavailable | No reward or debit; readable message; game continues |
 | UAT-06 | Partial play → background/save → relaunch | Exact passenger cursor, bus state and undo/progress restored |
@@ -34,5 +34,27 @@ paths on the signed candidate. Mark unavailable checks **Not run**, never Passed
   transparent margins and adult proportions; all six matching symbols remain
   readable at mobile scale. First-frame artwork is loaded before interactions.
 - Re-execute UAT-01 through UAT-09 and all five layout sizes after the refresh.
-  Capture home/game/win/fail/settings on the native iPhone simulator. Check
-  occupancy dots, hint outlines, passenger motion and front-bus hit targets.
+  Capture home/game/win/fail/settings/garage/map on the native iPhone simulator. Check
+  seat counts, hint outlines, passenger motion and front-bus hit targets.
+
+## Bus Surge 1.1 acceptance
+
+- UAT-15: Three taps 40 ms apart remain effective during bus motion. A stale
+  gesture cannot release a different front bus. First free undo restores the
+  board and parking cost without a debit.
+- UAT-16: Authored routes include losing choices; the exact target has a winning
+  path. Same-length solutions can earn different scores/stars. Replay preserves
+  personal bests and cannot farm coins.
+- UAT-17: Earn 300 coins through native route play, unlock Metro Line, relaunch,
+  and retain the equipped fleet and 24 stars. Duplicate or unaffordable purchases
+  cannot debit. Terminal styles and fleet styles appear in the board painters.
+- UAT-18: Schema-1 progress keeps its exact board, history, balance and preferences.
+  Ownership and assist use survive schema-2 relaunch. A legacy daily remains
+  playable but cannot submit to the new-rule competition.
+- UAT-19: With Game Center enabled on a signed device, verify authentication,
+  cancellation, the actual recurring board, a clean score, assisted-run exclusion
+  and UTC rollover. Simulator/port checks do not certify the Apple service.
+
+Seven native screenshots are captured after the displayed frame settles.
+Bounded JPEG previews support visual inspection; the artifact also retains the
+original PNGs. Exact execution/source identities accompany the test report.

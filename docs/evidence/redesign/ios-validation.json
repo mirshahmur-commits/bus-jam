@@ -1,0 +1,82 @@
+{
+  "screenshots": [
+    {
+      "name": "native-home",
+      "bytes": 1219160
+    },
+    {
+      "name": "native-game",
+      "bytes": 838133
+    },
+    {
+      "name": "native-win",
+      "bytes": 366379
+    },
+    {
+      "name": "native-fail",
+      "bytes": 429428
+    },
+    {
+      "name": "native-settings",
+      "bytes": 299366
+    },
+    {
+      "name": "native-garage",
+      "bytes": 791574
+    },
+    {
+      "name": "native-map",
+      "bytes": 642121
+    }
+  ],
+  "version": "1.1.0+2",
+  "journey": "Passed",
+  "nativePlatform": true,
+  "sandboxPayments": "Not run",
+  "realAds": "Not run",
+  "rapidInput": "Passed",
+  "collectionEarnBuyRestore": "Passed",
+  "starsAndRecords": "Passed",
+  "liveGameCenter": "Not run",
+  "status": "Passed",
+  "candidate_head_sha": "ca3000c7a595d29e984627318073762dabdd1b01",
+  "tested_checkout_sha": "59ef91d05f32aa45572af00819656b49ece01483",
+  "prebuild_source_identity": {
+    "version": "1.1.0+2",
+    "source_sha256": "46db2691e22f73c5657a7ec7b058a049a2a7c65b44e429b94bfc22abd2ef3053",
+    "files": 111,
+    "flutter": "3.47.6"
+  },
+  "run_id": 37775634596,
+  "job_id": 113306505680,
+  "run_url": "https://github.com/mirshahmur-commits/bus-jam/actions/runs/37775634596",
+  "normal_simulator_build": "Passed",
+  "visual_inspection": "Passed",
+  "platform": {
+    "runner": "standard macos-15 ARM64",
+    "xcode": "16.4 (16F6)",
+    "device": "iPhone 16 Pro simulator",
+    "runtime": "iOS 18.5"
+  },
+  "artifact": {
+    "id": 11550346577,
+    "name": "ios-evidence-59ef91d05f32aa45572af00819656b49ece01483",
+    "size_in_bytes": 4658748,
+    "url": "https://api.github.com/repos/mirshahmur-commits/bus-jam/actions/artifacts/11550346577",
+    "archive_download_url": "https://api.github.com/repos/mirshahmur-commits/bus-jam/actions/artifacts/11550346577/zip",
+    "expired": false,
+    "created_at": "2026-10-08T12:29:41Z",
+    "expires_at": "2026-10-09T12:29:38Z",
+    "updated_at": "2026-10-08T12:29:41Z",
+    "digest": "sha256:62a2b288c206b24b1607adfc301e8973d21fe8f028fbd96f8a114e4a249c4732",
+    "workflow_run": {
+      "id": 37775634596,
+      "repository_id": 1406960917,
+      "head_repository_id": 1406960917,
+      "head_branch": "feature/bus-surge-v2",
+      "head_sha": "ca3000c7a595d29e984627318073762dabdd1b01"
+    }
+  },
+  "preview_directory": "docs/evidence/redesign/",
+  "note": "JPEG previews are generated from the native PNGs. Native prebuild identity is measured after dependency setup; it is recorded independently from the Linux committed-source identity. Live services and signed TestFlight 1.1 remain unexecuted."
+}

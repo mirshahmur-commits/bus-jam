@@ -1,75 +1,65 @@
-# Bus Jam — approved urban artwork validation
+# Bus Surge 1.1 validation
 
-The complete urban artwork candidate passed automated, business, widget/layout
-and native iPhone simulator acceptance in GitHub Actions on 6 October 2026.
-Codemagic signs/builds/uploads internal TestFlight only after successful Actions
-for the exact main commit. Simulator success does not replace signed device or
-real StoreKit/AdMob acceptance.
+Version `1.1.0+2` passed automated checks, business rules and native iPhone
+simulator acceptance on 8 October 2026. Seven actual native captures were
+visually inspected and their JPEG previews are preserved in [redesign evidence](evidence/redesign/).
 
-## Exact validated candidate
+## Exact tested source
 
-- Version `1.0.0+1`; Flutter 3.47.6 / Dart 3.13.5.
-- App candidate commit: `97995bcf2a0b6e2ae2cf8780ff375cdc192198a2`.
-- Actions PR execution commit: `59da2e3e147a0d0577b6443cc1caff52768d86bb`.
-- Runtime source SHA-256 (105 committed files):
-  `90e8863994843d1a1c5dc07ec7bc97b4a1af82c29c01e2e7b032ae142ece0365`.
-- [Successful Actions run](https://github.com/mirshahmur-commits/bus-jam/actions/runs/37495390513).
-- Linux job `112378486432`, native job `112379672444` both passed.
-- Machine-readable [Linux/business results](evidence/github-validation.json)
-  and [native results](evidence/ios-validation.json).
+- Candidate: `ca3000c7a595d29e984627318073762dabdd1b01`.
+- PR checkout: `59ef91d05f32aa45572af00819656b49ece01483`.
+- Committed runtime identity (111 files): `de55934591b9b2024b0a08fa75dbdb9c8d11b11f463687f8178b5965bcc01e32`.
+- [Successful Actions run](https://github.com/mirshahmur-commits/bus-jam/actions/runs/37775634596); Linux job `113305621565`
+  and native job `113306505680` both completed successfully.
+- [Linux results](evidence/redesign/github-validation.json) and
+  [native results](evidence/redesign/ios-validation.json) record the exact evidence.
 
-Documentation and screenshot evidence commits preserve this runtime identity.
-Main push checks still repeat for the exact merge commit before TestFlight.
+Documentation and screenshot preservation do not change the runtime identity.
+Both checks repeat on the exact merged main commit before the Codemagic gate accepts it.
 
 ## Executed checks
 
 | Check | Observed result |
 | --- | --- |
-| Formatting | 24 Dart files, no changes |
-| Static analysis | No issues |
+| Formatting and strict analysis | 31 Dart files, zero formatting changes; no issues |
 | Game rules | 15 passed |
 | Controller/business behavior | 27 passed |
-| Persistence/analytics/provider failure handling | 4 passed |
-| Widget journeys and five screen sizes | 12 passed |
-| Five-screen screenshot scenario | 1 passed |
-| Actual bundled urban art: visible PNGs, alpha, proportions | 2 passed |
-| Total Flutter tests | 61 passed; zero failed or skipped |
-| Exact-commit TestFlight gate tests | 8 passed |
-| Deterministic levels | 10,000 validated |
-| Witness moves / independent solver levels | 149,839 / 300 |
-| Portable release build | JavaScript web build passed; Wasm dry run succeeded |
-| Native iPhone player journey | Passed with five screenshots |
-| Normal iOS debug simulator compilation | Passed |
+| Persistence/provider behavior | 4 passed |
+| Existing widgets/layouts | 12 passed |
+| Screenshot scenario | 1 passed |
+| Bundled artwork | 2 passed |
+| New puzzle/scoring/collection rules | 14 passed |
+| New input/garage widgets | 5 passed |
+| Total Flutter tests | 80 passed; zero failed or skipped |
+| Python signing/CI infrastructure tests | 21 passed |
+| Generated levels | 10,000 validated; 78,412 executed witness moves |
+| Independent solver checks | 300 levels |
+| Web release compilation | Passed |
+| Native iPhone acceptance | Passed |
+| Normal iOS simulator compilation | Passed |
+| Native visual inspection | Seven screenshots inspected |
 
-The native journey exercises first launch/onboarding, passenger matching, route
-victory, next route, paid hint, mid-level save/relaunch, a real blocked parking
-fixture, paid continuation to a fourth slot, victory and usable settings.
+Native acceptance includes rapid taps 40 ms apart during motion, first-launch
+onboarding, victory, hint, exact save/relaunch, blocked-terminal recovery, settings,
+then earning enough coins through route play to buy Metro Line, relaunching and
+retaining equipment and 24 stars. Migration tests preserve generator-1 boards
+and exclude legacy daily puzzles from generator-2 competition.
 
-## Artwork and visual acceptance
+Inspected captures show the new home, playable board, score/stars result,
+terminal-full recovery, settings, equipped Metro Line and route map. Full native
+PNGs remain in the one-day Actions artifact `11550346577` (4658748 compressed bytes),
+with digest `sha256:62a2b288c206b24b1607adfc301e8973d21fe8f028fbd96f8a114e4a249c4732`; permanent previews are 480-pixel JPEGs.
 
-The owner-approved bus/person sheet supplies the actual sprites. City, wordmark,
-app/launch icons and result art match its adult urban game style. Source sprites
-and the [prompt/inventory document](ART_DIRECTION.md) are committed. Assets are
-decoded before first frame and reused by the home scene and animated board.
-Readable matching badges, live seat dots and hint outlines remain geometric.
+Native platform: standard macOS runner, Xcode 16.4 (16F6), iPhone 16 Pro simulator
+on iOS 18.5. Its independently measured prebuild source hash after dependency
+setup is `46db2691e22f73c5657a7ec7b058a049a2a7c65b44e429b94bfc22abd2ef3053`. The Linux committed-source hash above
+and native prebuild hash describe their respective measurement points; no
+unverified claim of byte-for-byte equivalence is made.
 
-The five native captures were inspected: the artwork renders on home/gameplay,
-win/fail panels show the new illustrations, and settings controls remain usable.
-Exact native PNGs are preserved in [evidence/ios](evidence/ios/); README previews
-use the same bytes. Native evidence totaled 4,759,447 bytes, below the 16 MiB cap.
-ZIP artifact `11427782746` SHA-256:
-`00bc761f081260ee0aff3a7992ab3b9b11d3040b27746cbcc1f3a05dd10d47e3`.
+## Remaining acceptance
 
-Native platform: macOS 15.7.9 ARM64, Xcode 16.4 (16F6), iPhone 16 Pro simulator.
-Native prebuild source identity:
-`95ce6851db0626a08ce109d9400c8aa62a68a6a6b2866f2e4e49b6e7f8b545ee`.
-This differs solely because Flutter pub get adds the standard CocoaPods include
-line to Debug.xcconfig and Release.xcconfig. Reproducing those two additions gives
-the exact observed native hash.
-
-## Remaining platform acceptance
-
-Signed TestFlight compilation/upload, physical-device checks, StoreKit sandbox,
-real ad/consent verification and privacy/store metadata remain unexecuted. The
-App Store release gate remains closed. Internal TestFlight supports subsequent
-provider acceptance and is gated independently on successful exact-main Actions.
+The signed Bus Surge 1.1 TestFlight build/upload and physical-device verification
+are pending. Live StoreKit sandbox, AdMob consent/ads, optional Game Center service
+and store/privacy metadata are not certified by these tests. Real-money collection
+sales are not enabled. App Store submission remains gated; internal TestFlight
+is available after exact-main Actions succeeds.
