@@ -104,7 +104,6 @@ void main() {
     expect(c.hintLane, isNotNull);
     await tap(t, 'lane-${c.hintLane}');
     await tap(t, 'undo');
-    await tap(t, 'use-coins');
     expect(c.board.moves, 0);
     await tap(t, 'restart');
     await tap(t, 'confirm-restart');

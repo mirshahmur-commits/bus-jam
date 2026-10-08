@@ -1,22 +1,28 @@
 {
-  "version": "1.0.0+1",
-  "source_sha256": "90e8863994843d1a1c5dc07ec7bc97b4a1af82c29c01e2e7b032ae142ece0365",
+  "version": "1.1.0+2",
+  "source_sha256": "de55934591b9b2024b0a08fa75dbdb9c8d11b11f463687f8178b5965bcc01e32",
   "checks": {
     "automated": {
       "status": "Passed",
-      "evidence": "docs/evidence/github-validation.json"
+      "evidence": "docs/evidence/redesign/github-validation.json",
+      "run_id": 37775634596,
+      "candidate_head_sha": "ca3000c7a595d29e984627318073762dabdd1b01"
     },
     "business": {
       "status": "Passed",
-      "evidence": "docs/evidence/github-validation.json"
+      "evidence": "docs/evidence/redesign/github-validation.json",
+      "run_id": 37775634596,
+      "candidate_head_sha": "ca3000c7a595d29e984627318073762dabdd1b01"
     },
     "ios_uat": {
       "status": "Passed",
-      "evidence": "docs/evidence/ios-validation.json"
+      "evidence": "docs/evidence/redesign/ios-validation.json",
+      "run_id": 37775634596,
+      "candidate_head_sha": "ca3000c7a595d29e984627318073762dabdd1b01"
     },
     "ios_build": {
       "status": "Not run",
-      "reason": "Signed Codemagic TestFlight build pending; simulator compilation passed in Actions"
+      "reason": "Signed Bus Surge 1.1 Codemagic TestFlight build/upload pending; simulator compilation passed in Actions."
     },
     "storekit_sandbox": {
       "status": "Not run",
@@ -32,7 +38,13 @@
     },
     "ios_simulator_build": {
       "status": "Passed",
-      "evidence": "docs/evidence/ios-validation.json"
+      "evidence": "docs/evidence/redesign/ios-validation.json",
+      "run_id": 37775634596,
+      "candidate_head_sha": "ca3000c7a595d29e984627318073762dabdd1b01"
+    },
+    "game_center_sandbox": {
+      "status": "Not run",
+      "reason": "Optional Game Center product/capability configuration and real-device sandbox verification required before enabling the daily leaderboard."
     }
   }
 }

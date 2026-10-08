@@ -85,6 +85,13 @@ void main() {
     await t.pumpAndSettle();
     await press('game-settings');
     await shot('05-settings');
+    await press('sheet-close');
+    await press('home-button');
+    await press('garage-goal');
+    await shot('06-garage');
+    await press('garage-back');
+    await press('routes');
+    await shot('07-map');
     expect(t.takeException(), isNull);
   });
 }

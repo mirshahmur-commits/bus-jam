@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 import '../game/controller.dart';
 import '../game/model.dart';
@@ -10,28 +11,73 @@ class SceneLayout {
   SceneLayout(this.size, this.lanes, this.slots);
   final Size size;
   final int lanes, slots;
-  double get busW => min(70, (size.width - 56) / max(lanes, slots) - 13);
+  double get busW => min(72, (size.width - 40) / max(lanes, slots) - 14);
   double get busH => busW * 1.48;
-  double get parkY => 95;
-  double get depotY => parkY + busH + 85;
+  double get parkY => 94;
+  double get depotY => parkY + busH + 65;
   Rect slot(int i) => Rect.fromLTWH(
-    18 + (size.width - 36) / slots * (i + .5) - busW / 2,
+    20 + (size.width - 40) / slots * (i + .5) - busW / 2,
     parkY,
     busW,
     busH,
   );
   Rect depot(int lane, int depth) => Rect.fromLTWH(
-    18 + (size.width - 36) / lanes * (lane + .5) - busW / 2,
-    depotY + depth * 34,
+    20 + (size.width - 40) / lanes * (lane + .5) - busW / 2,
+    depotY + depth * 35,
     busW,
     busH,
   );
-  Offset person(int visible) => Offset(32 + visible * 31, 31);
-  Map<int, Rect> positions(Board b) => {
-    for (int i = 0; i < b.parked.length; i++) b.parked[i].id: slot(i),
-    for (int l = 0; l < b.lanes.length; l++)
-      for (int d = 0; d < b.lanes[l].length; d++) b.lanes[l][d].id: depot(l, d),
+  Offset person(int i) => Offset(31 + i * (size.width - 62) / 8, 42);
+  Map<int, Rect> positions(Board board) => {
+    for (int i = 0; i < board.parked.length; i++) board.parked[i].id: slot(i),
+    for (int lane = 0; lane < board.lanes.length; lane++)
+      for (int depth = 0; depth < board.lanes[lane].length; depth++)
+        board.lanes[lane][depth].id: depot(lane, depth),
   };
+  static double heightFor(double width, Level level) {
+    final layout = SceneLayout(Size(width, 0), level.lanes.length, level.slots);
+    final depth = level.lanes.map((l) => l.length).fold(1, max);
+    return layout.depotY + (depth - 1) * 35 + layout.busH + 25;
+  }
+}
+
+class _Motion {
+  const _Motion(this.from, this.to, this.start);
+  final Rect from, to;
+  final int start;
+  Rect at(int now) => Rect.lerp(
+    from,
+    to,
+    Curves.easeOutCubic.transform(((now - start) / 260).clamp(0.0, 1.0)),
+  )!;
+  bool done(int now) => now - start >= 260;
+}
+
+class BusDeparture {
+  const BusDeparture(this.bus, this.from, this.parking, this.start);
+  final Bus bus;
+  final Rect from, parking;
+  final int start;
+  Rect at(int now, double width) {
+    final p = ((now - start) / 440).clamp(0.0, 1.0);
+    if (p < .43) {
+      return Rect.lerp(from, parking, Curves.easeOutCubic.transform(p / .43))!;
+    }
+    return parking.shift(
+      Offset(Curves.easeInCubic.transform((p - .43) / .57) * (width + 100), 0),
+    );
+  }
+
+  bool done(int now) => now - start >= 440;
+}
+
+class PassengerFlight {
+  const PassengerFlight(this.color, this.from, this.to, this.start);
+  final BusColor color;
+  final Offset from, to;
+  final int start;
+  double progress(int now) => ((now - start) / 220).clamp(0.0, 1.0);
+  bool done(int now) => now - start >= 220;
 }
 
 class GameScene extends StatefulWidget {
@@ -42,100 +88,175 @@ class GameScene extends StatefulWidget {
   State<GameScene> createState() => _GameSceneState();
 }
 
+/// Each entity keeps its own motion. Input is never gated on an animation.
+/// Retargeting starts from the current rendered position, including rapid taps.
 class _GameSceneState extends State<GameScene>
     with SingleTickerProviderStateMixin {
-  late final AnimationController animation;
-  Board? before;
-  MoveResult? transition;
+  late final Ticker ticker;
+  late Board observed;
+  SceneLayout? layout;
+  final motions = <int, _Motion>{};
+  final departures = <BusDeparture>[];
+  final flights = <PassengerFlight>[];
+  int now = 0, epoch = 0;
+  int? pressedLane;
+
   @override
   void initState() {
     super.initState();
-    animation = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1100),
-    )..value = 1;
+    observed = widget.controller.board;
+    ticker = createTicker((elapsed) {
+      setState(() {
+        now = epoch + elapsed.inMilliseconds;
+        motions.removeWhere((id, motion) => motion.done(now));
+        departures.removeWhere((departure) => departure.done(now));
+        flights.removeWhere((flight) => flight.done(now));
+      });
+      if (motions.isEmpty && departures.isEmpty && flights.isEmpty) {
+        ticker.stop();
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant GameScene oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (observed != widget.controller.board ||
+        widget.controller.reducedMotion) {
+      motions.clear();
+      departures.clear();
+      flights.clear();
+      ticker.stop();
+      observed = widget.controller.board;
+    }
   }
 
   @override
   void dispose() {
-    animation.dispose();
+    ticker.dispose();
     super.dispose();
   }
 
-  void release(int lane) {
-    if (animation.isAnimating || widget.controller.busy) {
-      return;
-    }
-    final old = widget.controller.board,
-        result = widget.controller.release(lane);
-    if (!result.accepted) {
-      return;
-    }
+  void release(int lane, int expectedBusId) {
+    final c = widget.controller, scene = layout;
+    if (scene == null || c.busy) return;
+    final old = c.board, oldPositions = scene.positions(c.board);
+    final result = c.release(lane, expectedBusId: expectedBusId);
+    if (!result.accepted) return;
+    observed = result.board;
     setState(() {
-      before = old;
-      transition = result;
+      pressedLane = null;
+      if (!c.reducedMotion) {
+        final destinations = scene.positions(result.board);
+        for (final entry in destinations.entries) {
+          final from =
+              motions[entry.key]?.at(now) ??
+              oldPositions[entry.key] ??
+              entry.value;
+          if (from != entry.value) {
+            motions[entry.key] = _Motion(from, entry.value, now);
+          }
+        }
+        for (final bus in result.departures) {
+          final oldSlot = old.parked.indexWhere((b) => b.id == bus.id);
+          final parking = scene.slot(
+            oldSlot >= 0 ? oldSlot : old.parked.length,
+          );
+          final from =
+              motions.remove(bus.id)?.at(now) ??
+              oldPositions[bus.id] ??
+              parking;
+          departures.add(BusDeparture(bus, from, parking, now));
+        }
+        for (int i = 0; i < min(12, result.boarding.length); i++) {
+          final boarding = result.boarding[i];
+          final oldSlot = old.parked.indexWhere((b) => b.id == boarding.busId);
+          final target =
+              destinations[boarding.busId] ??
+              scene.slot(oldSlot >= 0 ? oldSlot : old.parked.length);
+          flights.add(
+            PassengerFlight(
+              boarding.color,
+              scene.person(min(8, boarding.passenger - old.cursor)),
+              target.center,
+              now + i * 8,
+            ),
+          );
+        }
+        if (!ticker.isActive) {
+          epoch = now;
+          ticker.start();
+        }
+      }
     });
-    if (widget.controller.reducedMotion) {
-      animation.value = 1;
-    } else {
-      animation.forward(from: 0);
-    }
     widget.onMove(result);
   }
 
   @override
-  Widget build(BuildContext context) {
-    final c = widget.controller;
-    return LayoutBuilder(
-      builder: (context, con) {
-        final layout = SceneLayout(
-          Size(con.maxWidth, con.maxHeight),
-          c.board.lanes.length,
-          c.board.slots,
-        );
-        return AnimatedBuilder(
-          animation: animation,
-          builder: (context, child) {
-            final valid = transition?.board == c.board;
-            return Stack(
-              children: [
-                Positioned.fill(
-                  child: CustomPaint(
-                    painter: BoardPainter(
-                      c.level,
-                      c.board,
-                      layout,
-                      before: valid ? before : null,
-                      result: valid ? transition : null,
-                      t: valid ? animation.value : 1,
-                      hint: c.hintLane,
-                    ),
-                  ),
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final c = widget.controller;
+      final scene = SceneLayout(
+        Size(constraints.maxWidth, constraints.maxHeight),
+        c.board.lanes.length,
+        c.board.slots,
+      );
+      layout = scene;
+      final positions = scene
+          .positions(c.board)
+          .map((id, rect) => MapEntry(id, motions[id]?.at(now) ?? rect));
+      return Stack(
+        children: [
+          Positioned.fill(
+            child: RepaintBoundary(
+              child: CustomPaint(
+                painter: BoardPainter(
+                  c.level,
+                  c.board,
+                  scene,
+                  positions: positions,
+                  departures: departures,
+                  flights: flights,
+                  now: now,
+                  hint: c.hintLane,
+                  pressedLane: pressedLane,
+                  skin: c.selectedBus,
+                  terminal: c.selectedTerminal,
                 ),
-                for (int lane = 0; lane < c.board.lanes.length; lane++)
-                  if (c.board.lanes[lane].isNotEmpty)
-                    Positioned.fromRect(
-                      rect: layout.depot(lane, 0).inflate(9),
-                      child: Semantics(
-                        label:
-                            'Release ${colorNames[c.board.lanes[lane].first.color.index]} bus, lane ${lane + 1}',
-                        button: true,
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            key: ValueKey('lane-$lane'),
-                            borderRadius: BorderRadius.circular(22),
-                            onTap: () => release(lane),
-                            child: const SizedBox.expand(),
-                          ),
-                        ),
-                      ),
-                    ),
-              ],
-            );
-          },
-        );
-      },
+              ),
+            ),
+          ),
+          for (int lane = 0; lane < c.board.lanes.length; lane++)
+            if (c.board.lanes[lane].isNotEmpty)
+              target(scene, lane, c.board.lanes[lane].first),
+        ],
+      );
+    },
+  );
+
+  Widget target(SceneLayout scene, int lane, Bus bus) {
+    final c = widget.controller;
+    return Positioned.fromRect(
+      rect: scene.depot(lane, 0).inflate(8),
+      child: Semantics(
+        label:
+            'Release ${colorNames[bus.color.index]} bus, lane ${lane + 1}, ${bus.capacity} seats',
+        button: true,
+        enabled: c.board.phase(c.level) == GamePhase.playing && !c.busy,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            key: ValueKey('lane-$lane'),
+            borderRadius: BorderRadius.circular(18),
+            onTapDown: (_) => setState(() => pressedLane = lane),
+            onTapCancel: () => setState(() => pressedLane = null),
+            onTap: c.board.phase(c.level) == GamePhase.playing && !c.busy
+                ? () => release(lane, bus.id)
+                : null,
+            child: const SizedBox.expand(),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -145,173 +266,138 @@ class BoardPainter extends CustomPainter {
     this.level,
     this.board,
     this.layout, {
-    this.before,
-    this.result,
-    required this.t,
+    required this.positions,
+    required this.departures,
+    required this.flights,
+    required this.now,
     this.hint,
+    this.pressedLane,
+    this.skin = 'classic',
+    this.terminal = 'terminal-classic',
   });
   final Level level;
   final Board board;
   final SceneLayout layout;
-  final Board? before;
-  final MoveResult? result;
-  final double t;
-  final int? hint;
-
-  Rect boardingPosition(int busId) {
-    final oldIndex = before?.parked.indexWhere((bus) => bus.id == busId) ?? -1;
-    final slot = oldIndex >= 0 ? oldIndex : before?.parked.length ?? 0;
-    return layout.slot(slot.clamp(0, board.slots - 1));
-  }
+  final Map<int, Rect> positions;
+  final List<BusDeparture> departures;
+  final List<PassengerFlight> flights;
+  final int now;
+  final int? hint, pressedLane;
+  final String skin, terminal;
 
   @override
-  void paint(Canvas c, Size s) {
-    rr(c, Offset.zero & s, const Color(0xFF454F5C), 27);
-    rr(c, Rect.fromLTWH(13, 8, s.width - 26, 62), const Color(0xFFDCE2E8), 19);
-    final visible = min(9, level.passengers.length - board.cursor);
-    for (int i = 0; i < visible; i++) {
-      final p = layout.person(i);
-      if (p.dx > s.width - 30) {
-        break;
-      }
-      paintPerson(
-        c,
-        p,
-        level.passengers[board.cursor + i],
-        scale: i == 0 ? 1 : .82,
-      );
-    }
-    label(
-      c,
-      '${level.passengers.length - board.cursor} WAITING',
-      Offset(s.width / 2, 61),
-      size: 9,
-      color: ink.withValues(alpha: .5),
-    );
+  void paint(Canvas c, Size size) {
+    final palette = TerminalPalette.forId(terminal);
+    rr(c, Offset.zero & size, palette.floor, 24);
     rr(
       c,
-      Rect.fromLTWH(0, layout.parkY - 14, s.width, layout.busH + 31),
-      const Color(0xFF606D7C),
+      Rect.fromLTWH(9, 8, size.width - 18, 65),
+      Colors.white.withValues(alpha: .9),
+      18,
+    );
+    for (int i = 0; i < min(9, level.passengers.length - board.cursor); i++) {
+      paintPerson(
+        c,
+        layout.person(i),
+        level.passengers[board.cursor + i],
+        scale: i == 0 ? .78 : .64,
+      );
+    }
+    if (board.cursor < level.passengers.length) {
+      label(c, 'NEXT', const Offset(31, 64), size: 8, color: teal);
+    }
+    rr(
+      c,
+      Rect.fromLTWH(0, layout.parkY - 12, size.width, layout.busH + 28),
+      palette.road,
       0,
     );
-    for (int i = 0; i < board.slots; i++) {
-      final r = layout.slot(i).inflate(5);
+    for (int slot = 0; slot < board.slots; slot++) {
+      final rect = layout.slot(slot).inflate(4);
       c.drawRRect(
-        RRect.fromRectAndRadius(r, const Radius.circular(11)),
+        RRect.fromRectAndRadius(rect, const Radius.circular(10)),
         Paint()
-          ..color = const Color(0xFFD6DDE3)
+          ..color = palette.line.withValues(alpha: .85)
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 2,
+          ..strokeWidth = 1.8,
       );
-      if (i >= board.parked.length) {
+      if (slot >= board.parked.length) {
         label(
           c,
           'P',
-          r.center,
-          size: 24,
-          color: Colors.white.withValues(alpha: .45),
+          rect.center,
+          size: 23,
+          color: palette.line.withValues(alpha: .5),
         );
       }
     }
     label(
       c,
-      'BOARDING ZONE  ·  ${board.parked.length}/${board.slots} OCCUPIED',
-      Offset(s.width / 2, layout.parkY + layout.busH + 35),
-      size: 9,
-      color: Colors.white.withValues(alpha: .8),
-    );
-    label(
-      c,
-      'TAP A FRONT BUS',
-      Offset(s.width / 2, layout.depotY - 22),
+      '${board.slots - board.parked.length} FREE ${board.slots - board.parked.length == 1 ? 'SPACE' : 'SPACES'}',
+      Offset(size.width / 2, layout.parkY + layout.busH + 34),
       size: 10,
-      color: Colors.white.withValues(alpha: .8),
+      color: terminal == 'terminal-night' ? palette.line : ink,
     );
-    final now = layout.positions(board),
-        prev = before == null
-            ? now
-            : SceneLayout(
-                s,
-                before!.lanes.length,
-                before!.slots,
-              ).positions(before!);
     for (int lane = 0; lane < board.lanes.length; lane++) {
-      final count = min(4, board.lanes[lane].length);
-      for (int depth = count - 1; depth >= 0; depth--) {
-        final b = board.lanes[lane][depth];
-        final r = Rect.lerp(
-          prev[b.id] ?? now[b.id],
-          now[b.id],
-          Curves.easeOutCubic.transform(t),
-        )!;
+      final top = layout.depot(lane, 0);
+      final bottom = layout.depot(lane, max(0, board.lanes[lane].length - 1));
+      rr(
+        c,
+        Rect.fromLTRB(
+          top.left - 7,
+          top.top - 8,
+          top.right + 7,
+          bottom.bottom + 9,
+        ),
+        palette.road.withValues(alpha: .14),
+        15,
+      );
+      for (int depth = board.lanes[lane].length - 1; depth >= 0; depth--) {
+        final bus = board.lanes[lane][depth];
         paintBus(
           c,
-          r,
-          b,
-          opacity: depth == 0 ? 1 : max(.45, 1 - depth * .16),
-          highlighted: hint == lane && depth == 0,
+          positions[bus.id]!,
+          bus,
+          opacity: depth == 0 ? 1 : .78,
+          highlighted: depth == 0 && (hint == lane || pressedLane == lane),
+          skin: skin,
         );
-      }
-      if (board.lanes[lane].length > 4) {
-        label(
-          c,
-          '+${board.lanes[lane].length - 4}',
-          Offset(layout.depot(lane, 0).center.dx, s.height - 12),
-          size: 11,
-          color: Colors.white,
-        );
-      }
-    }
-    for (final b in board.parked) {
-      final destination = now[b.id]!;
-      paintBus(
-        c,
-        Rect.lerp(
-          prev[b.id] ?? destination,
-          destination,
-          Curves.easeOutCubic.transform((t / .35).clamp(0, 1)),
-        )!,
-        b,
-      );
-    }
-    if (t < 1 && result != null && before != null) {
-      for (final b in result!.departures) {
-        final parking = boardingPosition(b.id), start = prev[b.id] ?? parking;
-        var r = Rect.lerp(
-          start,
-          parking,
-          Curves.easeOutCubic.transform((t / .28).clamp(0, 1)),
-        )!;
-        if (t > .66) {
-          r = r.shift(
-            Offset(
-              Curves.easeInCubic.transform(((t - .66) / .34).clamp(0, 1)) *
-                  (s.width + 100),
-              0,
-            ),
+        if (depth > 0) {
+          final r = layout.depot(lane, depth);
+          rr(c, Rect.fromLTWH(r.right - 6, r.top + 9, 14, 17), ink, 5);
+          label(
+            c,
+            '${bus.capacity}',
+            Offset(r.right + 1, r.top + 17),
+            size: 10,
+            color: Colors.white,
           );
         }
-        paintBus(c, r, b);
       }
-      for (int i = 0; i < min(12, result!.boarding.length); i++) {
-        final item = result!.boarding[i],
-            p = ((t - .2 - i * .018) / .4).clamp(0.0, 1.0);
-        if (p <= 0 || p >= 1) {
-          continue;
-        }
-        final target = now[item.busId] ?? boardingPosition(item.busId),
-            origin = layout.person(min(8, item.passenger - before!.cursor));
-        paintPerson(
-          c,
-          Offset.lerp(origin, target.center, Curves.easeInOut.transform(p))!,
-          item.color,
-          scale: 1 - p * .6,
-          bounce: -sin(p * pi) * 18,
-        );
-      }
+    }
+    for (final bus in board.parked) {
+      paintBus(c, positions[bus.id]!, bus, skin: skin);
+    }
+    for (final departure in departures) {
+      paintBus(c, departure.at(now, size.width), departure.bus, skin: skin);
+    }
+    for (final flight in flights) {
+      final p = flight.progress(now);
+      if (p <= 0 || p >= 1) continue;
+      paintPerson(
+        c,
+        Offset.lerp(
+          flight.from,
+          flight.to,
+          Curves.easeInOutCubic.transform(p),
+        )!,
+        flight.color,
+        scale: .65 - p * .35,
+        bounce: -sin(p * pi) * 14,
+      );
     }
   }
 
   @override
-  bool shouldRepaint(BoardPainter old) => true;
+  bool shouldRepaint(BoardPainter oldDelegate) => true;
 }

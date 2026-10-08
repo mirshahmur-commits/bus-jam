@@ -34,6 +34,10 @@ class Level {
     this.slots = 3,
     List<int> solution = const [],
     this.generatorVersion = 1,
+    this.title = 'City route',
+    this.lesson = 'Keep a space open for the next bus.',
+    this.parkingTarget = 0,
+    this.hard = false,
   }) : lanes = List.unmodifiable(lanes.map((e) => List<Bus>.unmodifiable(e))),
        passengers = List.unmodifiable(passengers),
        solution = List.unmodifiable(solution) {
@@ -42,6 +46,8 @@ class Level {
         slots > 4 ||
         lanes.isEmpty ||
         lanes.length > 4 ||
+        parkingTarget < 0 ||
+        (generatorVersion != 1 && generatorVersion != 2) ||
         passengers.isEmpty) {
       throw const FormatException('Invalid level dimensions');
     }
@@ -67,6 +73,9 @@ class Level {
     }
   }
   final int number, seed, slots, generatorVersion;
+  final String title, lesson;
+  final int parkingTarget;
+  final bool hard;
   final List<List<Bus>> lanes;
   final List<BusColor> passengers;
   final List<int> solution;
@@ -85,9 +94,13 @@ class Level {
     'lanes': lanes.map((l) => l.map((b) => b.toJson()).toList()).toList(),
     'passengers': passengers.map((c) => c.index).toList(),
     'solution': solution,
+    'title': title,
+    'lesson': lesson,
+    'parkingTarget': parkingTarget,
+    'hard': hard,
   };
   factory Level.fromJson(Map<String, dynamic> j) {
-    if (j['version'] != 1) {
+    if (j['version'] != 1 && j['version'] != 2) {
       throw const FormatException('Unsupported generator version');
     }
     return Level(
@@ -106,6 +119,10 @@ class Level {
           .map((c) => BusColor.values[c as int])
           .toList(),
       solution: (j['solution'] as List).cast<int>(),
+      title: j['title'] as String? ?? 'City route',
+      lesson: j['lesson'] as String? ?? 'Keep a space open for the next bus.',
+      parkingTarget: j['parkingTarget'] as int? ?? 0,
+      hard: j['hard'] as bool? ?? false,
     );
   }
 }
@@ -225,7 +242,7 @@ class Board {
   }
 
   String get searchKey =>
-      '${lanes.map((l) => l.length).join(',')}:$cursor:${(parked.map((b) => '${b.id}/${b.boarded}').toList()..sort()).join(',')}:$slots';
+      '${lanes.map((l) => l.length).join(',')}:$cursor:${parked.map((b) => '${b.id}/${b.boarded}').join(',')}:$slots';
 }
 
 class Boarding {

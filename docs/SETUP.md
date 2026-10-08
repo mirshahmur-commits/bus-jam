@@ -7,7 +7,7 @@ Repository: `mirshahmur-commits/bus-jam`. iOS first; no owner Mac required.
 1. Push/PR: GitHub Actions runs formatting, analysis, business/controller/widget
    tests, 10,000 generated levels, release web compilation and CI-gate tests on Linux.
 2. After Linux passes, a standard `macos-15` Actions runner boots an iPhone
-   simulator, runs the native player journey, saves five screenshots and compiles
+   simulator, runs the native player journey, saves seven screenshots and compiles
    the normal simulator app. No signing account is required for these tests.
 3. On `main`, wait for both **quality** and **iOS simulator acceptance** to pass.
 4. In Codemagic, manually start the only workflow, **ios-testflight**, on that
@@ -23,7 +23,7 @@ Repository: `mirshahmur-commits/bus-jam`. iOS first; no owner Mac required.
 
 1. Apple Developer: create App ID `com.systemcraft.busJam` with In-App Purchase.
 2. App Store Connect: create the app with that Bundle ID and an available display name.
-   Bus Jam is a working title; name availability is not claimed.
+   The display name is Bus Surge; the internal bundle ID remains unchanged.
 3. Create non-consumable `com.systemcraft.busJam.remove_ads`, set price/localizations,
    agreements/tax/banking if needed, and a sandbox tester.
 4. Add the repository in Codemagic. Reuse an existing App Store Connect API key

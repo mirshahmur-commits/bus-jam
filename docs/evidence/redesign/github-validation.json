@@ -1,0 +1,37 @@
+{
+  "version": "1.1.0+2",
+  "candidate_head_sha": "ca3000c7a595d29e984627318073762dabdd1b01",
+  "tested_checkout_sha": "59ef91d05f32aa45572af00819656b49ece01483",
+  "source_sha256": "de55934591b9b2024b0a08fa75dbdb9c8d11b11f463687f8178b5965bcc01e32",
+  "files": 111,
+  "run_id": 37775634596,
+  "job_id": 113305621565,
+  "run_url": "https://github.com/mirshahmur-commits/bus-jam/actions/runs/37775634596",
+  "status": "Passed",
+  "flutter_tests": {
+    "widget_test.dart": 12,
+    "screenshot_test.dart": 1,
+    "game_rules_test.dart": 15,
+    "urban_assets_test.dart": 2,
+    "controller_test.dart": 27,
+    "platform_test.dart": 4,
+    "redesign_rules_test.dart": 14,
+    "redesign_widget_test.dart": 5
+  },
+  "total": 80,
+  "failed": 0,
+  "skipped": 0,
+  "python_tests": 21,
+  "generator": {
+    "status": "Passed",
+    "levels": 10000,
+    "witnessMoves": 78412,
+    "independentSolverLevels": 300,
+    "generatorVersion": 2,
+    "elapsedMs": 3582,
+    "utc": "2026-10-08T12:17:24.069993Z"
+  },
+  "static_analysis": "No issues",
+  "formatting": "31 files; zero changes",
+  "portable_release": "Passed"
+}
