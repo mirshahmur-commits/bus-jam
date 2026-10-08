@@ -34,9 +34,17 @@ class GameCenterLeaderboards implements LeaderboardsPort {
   @override
   Future<bool> open(DailyScore? score) => _call('show', score);
   Future<bool> _call(String method, DailyScore? score) async {
-    if (!enabled || (score != null && (score.score < 0 || score.score > 2000))) return false;
+    if (!enabled || (score != null && (score.score < 0 || score.score > 2000))) {
+      return false;
+    }
     try {
-      return await channel.invokeMethod<bool>(method, {'leaderboard': id, if (score != null) ...score.toJson()}).timeout(const Duration(seconds: 30)) ?? false;
+      return await channel
+              .invokeMethod<bool>(method, {
+                'leaderboard': id,
+                if (score != null) ...score.toJson(),
+              })
+              .timeout(const Duration(seconds: 30)) ??
+          false;
     } catch (_) {
       return false;
     }
@@ -45,5 +53,7 @@ class GameCenterLeaderboards implements LeaderboardsPort {
 
 LeaderboardsPort defaultLeaderboards() {
   const id = String.fromEnvironment('GAME_CENTER_LEADERBOARD_ID');
-  return !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS && id.isNotEmpty ? const GameCenterLeaderboards(id) : const OfflineLeaderboards();
+  return !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS && id.isNotEmpty
+      ? const GameCenterLeaderboards(id)
+      : const OfflineLeaderboards();
 }

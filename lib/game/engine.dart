@@ -13,7 +13,9 @@ class GameEngine {
       if (board.phase(level) == GamePhase.failed) return null;
       final key = board.searchKey;
       if (memo.containsKey(key)) return memo[key];
-      if (memo.length >= maxStates) throw StateError('Puzzle analysis budget exhausted');
+      if (memo.length >= maxStates) {
+        throw StateError('Puzzle analysis budget exhausted');
+      }
       memo[key] = null;
       ({List<int> route, int cost})? best;
       var safe = 0, unsafe = 0;
@@ -27,17 +29,27 @@ class GameEngine {
         }
         safe++;
         final cost = move.board.parked.length + tail.cost;
-        if (best == null || cost < best.cost) best = (route: [lane, ...tail.route], cost: cost);
+        if (best == null || cost < best.cost) {
+          best = (route: [lane, ...tail.route], cost: cost);
+        }
       }
       if (safe > 0 && unsafe > 0) decisions++;
       losingChoices += unsafe;
       memo[key] = best;
       return best;
     }
+
     final best = visit(Board.initial(level));
     if (best == null) throw StateError('Unsolvable puzzle');
-    return RouteAnalysis(List.unmodifiable(best.route), best.cost, memo.length, decisions, losingChoices);
+    return RouteAnalysis(
+      List.unmodifiable(best.route),
+      best.cost,
+      memo.length,
+      decisions,
+      losingChoices,
+    );
   }
+
   static MoveResult release(Level level, Board board, int lane) {
     if (board.phase(level) != GamePhase.playing ||
         lane < 0 ||
@@ -138,7 +150,13 @@ class GameEngine {
 }
 
 class RouteAnalysis {
-  const RouteAnalysis(this.route, this.parkingCost, this.states, this.decisions, this.losingChoices);
+  const RouteAnalysis(
+    this.route,
+    this.parkingCost,
+    this.states,
+    this.decisions,
+    this.losingChoices,
+  );
   final List<int> route;
   final int parkingCost, states, decisions, losingChoices;
 }

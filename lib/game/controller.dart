@@ -62,14 +62,31 @@ class GameController extends ChangeNotifier {
   String selectedBus = 'classic', selectedTerminal = 'terminal-classic';
   bool usedHint = false, freeUndoUsed = false;
   int undosUsed = 0;
-  int get parkingCost => history.fold(0, (sum, b) => sum + b.parked.length) + board.parked.length;
-  String get recordKey => dailyMode ? 'daily:${level.seed}' : '${level.generatorVersion}:${level.number}';
+  int get parkingCost =>
+      history.fold(0, (sum, b) => sum + b.parked.length) + board.parked.length;
+  String get recordKey => dailyMode
+      ? 'daily:${level.seed}'
+      : '${level.generatorVersion}:${level.number}';
   RouteRecord? routeRecord(int number) => records['2:$number'];
-  RouteRecord? get dailyRecord => records['daily:${int.parse(_day(clock().toUtc()).replaceAll('-', ''))}'];
-  int get totalStars => records.entries.where((e) => e.key.startsWith('2:')).fold(0, (sum, e) => sum + e.value.stars);
-  int get perfectRoutes => records.entries.where((e) => e.key.startsWith('2:') && e.value.stars == 3).length;
-  String get rank => totalStars >= 90 ? 'Depot Master' : totalStars >= 45 ? 'Route Expert' : totalStars >= 15 ? 'City Dispatcher' : 'Rookie Dispatcher';
-  Cosmetic get nextCollectible => cosmetics.firstWhere((item) => !ownedCosmetics.contains(item.id), orElse: () => cosmetics.last);
+  RouteRecord? get dailyRecord =>
+      records['daily:${int.parse(_day(clock().toUtc()).replaceAll('-', ''))}'];
+  int get totalStars => records.entries
+      .where((e) => e.key.startsWith('2:'))
+      .fold(0, (sum, e) => sum + e.value.stars);
+  int get perfectRoutes => records.entries
+      .where((e) => e.key.startsWith('2:') && e.value.stars == 3)
+      .length;
+  String get rank => totalStars >= 90
+      ? 'Depot Master'
+      : totalStars >= 45
+      ? 'Route Expert'
+      : totalStars >= 15
+      ? 'City Dispatcher'
+      : 'Rookie Dispatcher';
+  Cosmetic get nextCollectible => cosmetics.firstWhere(
+    (item) => !ownedCosmetics.contains(item.id),
+    orElse: () => cosmetics.last,
+  );
   Map<String, dynamic>? _campaign;
   int _epoch = 0;
   bool _disposed = false;
@@ -118,23 +135,44 @@ class GameController extends ChangeNotifier {
             : DateTime.parse(j['lastAd'] as String);
         if (j['schema'] == 2) {
           final savedRecords = j['records'] as Map<String, dynamic>? ?? {};
-          if (savedRecords.length > 10000) throw const FormatException('Too many records');
-          for (final entry in savedRecords.entries) {
-            if (!RegExp(r'^(1|2|daily):[0-9]+$').hasMatch(entry.key)) throw const FormatException('Invalid record key');
-            records[entry.key] = RouteRecord.fromJson(Map<String, dynamic>.from(entry.value as Map));
+          if (savedRecords.length > 10000) {
+            throw const FormatException('Too many records');
           }
-          for (final entry in (j['rankedDailyScores'] as Map<String, dynamic>? ?? {}).entries) {
+          for (final entry in savedRecords.entries) {
+            if (!RegExp(r'^(1|2|daily):[0-9]+$').hasMatch(entry.key)) {
+              throw const FormatException('Invalid record key');
+            }
+            records[entry.key] = RouteRecord.fromJson(
+              Map<String, dynamic>.from(entry.value as Map),
+            );
+          }
+          for (final entry
+              in (j['rankedDailyScores'] as Map<String, dynamic>? ?? {})
+                  .entries) {
             final value = entry.value as int;
-            if (!RegExp(r'^[0-9]{8}$').hasMatch(entry.key) || value < 0 || value > 2000) throw const FormatException('Invalid ranked score');
+            if (!RegExp(r'^[0-9]{8}$').hasMatch(entry.key) ||
+                value < 0 ||
+                value > 2000) {
+              throw const FormatException('Invalid ranked score');
+            }
             rankedDailyScores[entry.key] = value;
           }
           for (final id in (j['ownedCosmetics'] as List? ?? const [])) {
-            if (id is String && cosmeticById(id) != null) ownedCosmetics.add(id);
+            if (id is String && cosmeticById(id) != null) {
+              ownedCosmetics.add(id);
+            }
           }
           final bus = j['selectedBus'] as String? ?? 'classic';
-          final terminal = j['selectedTerminal'] as String? ?? 'terminal-classic';
-          if (ownedCosmetics.contains(bus) && cosmeticById(bus)?.kind == CosmeticKind.bus) selectedBus = bus;
-          if (ownedCosmetics.contains(terminal) && cosmeticById(terminal)?.kind == CosmeticKind.terminal) selectedTerminal = terminal;
+          final terminal =
+              j['selectedTerminal'] as String? ?? 'terminal-classic';
+          if (ownedCosmetics.contains(bus) &&
+              cosmeticById(bus)?.kind == CosmeticKind.bus) {
+            selectedBus = bus;
+          }
+          if (ownedCosmetics.contains(terminal) &&
+              cosmeticById(terminal)?.kind == CosmeticKind.terminal) {
+            selectedTerminal = terminal;
+          }
         }
       }
     } catch (_) {
@@ -147,7 +185,9 @@ class GameController extends ChangeNotifier {
       _campaign = null;
       records.clear();
       rankedDailyScores.clear();
-      ownedCosmetics..clear()..addAll(['classic', 'terminal-classic']);
+      ownedCosmetics
+        ..clear()
+        ..addAll(['classic', 'terminal-classic']);
       selectedBus = 'classic';
       selectedTerminal = 'terminal-classic';
       _resetRun();
@@ -176,7 +216,13 @@ class GameController extends ChangeNotifier {
     'level': level.toJson(),
     'board': board.toJson(),
     'history': history.map((b) => b.toJson()).toList(),
-    'run': {'usedHint': usedHint, 'freeUndoUsed': freeUndoUsed, 'undosUsed': undosUsed, 'attempts': attempts, 'result': lastResult?.toJson()},
+    'run': {
+      'usedHint': usedHint,
+      'freeUndoUsed': freeUndoUsed,
+      'undosUsed': undosUsed,
+      'attempts': attempts,
+      'result': lastResult?.toJson(),
+    },
   };
   void _resetRun() {
     usedHint = false;
@@ -184,6 +230,7 @@ class GameController extends ChangeNotifier {
     undosUsed = 0;
     lastResult = null;
   }
+
   void _restoreRun(Map<String, dynamic> session) {
     _resetRun();
     final run = session['run'] as Map<String, dynamic>?;
@@ -192,9 +239,14 @@ class GameController extends ChangeNotifier {
     freeUndoUsed = run['freeUndoUsed'] as bool;
     undosUsed = run['undosUsed'] as int;
     attempts = run['attempts'] as int;
-    if (undosUsed < 0 || undosUsed > 10000 || attempts < 1) throw const FormatException('Invalid run');
-    lastResult = run['result'] == null ? null : RouteResult.fromJson(Map<String, dynamic>.from(run['result'] as Map));
+    if (undosUsed < 0 || undosUsed > 10000 || attempts < 1) {
+      throw const FormatException('Invalid run');
+    }
+    lastResult = run['result'] == null
+        ? null
+        : RouteResult.fromJson(Map<String, dynamic>.from(run['result'] as Map));
   }
+
   String snapshot() => jsonEncode({
     'schema': 2,
     'unlocked': unlocked,
@@ -251,7 +303,12 @@ class GameController extends ChangeNotifier {
   }
 
   MoveResult release(int lane, {int? expectedBusId}) {
-    if (busy || (expectedBusId != null && (lane < 0 || lane >= board.lanes.length || board.lanes[lane].isEmpty || board.lanes[lane].first.id != expectedBusId))) {
+    if (busy ||
+        (expectedBusId != null &&
+            (lane < 0 ||
+                lane >= board.lanes.length ||
+                board.lanes[lane].isEmpty ||
+                board.lanes[lane].first.id != expectedBusId))) {
       return MoveResult(board);
     }
     final result = GameEngine.release(level, board, lane);
@@ -274,7 +331,8 @@ class GameController extends ChangeNotifier {
         if (completedDay != day &&
             level.seed == int.parse(day.replaceAll('-', ''))) {
           streak =
-              completedDay == _day(clock().toUtc().subtract(const Duration(days: 1)))
+              completedDay ==
+                  _day(clock().toUtc().subtract(const Duration(days: 1)))
               ? streak + 1
               : 1;
           completedDay = day;
@@ -285,20 +343,66 @@ class GameController extends ChangeNotifier {
         reward = 25;
       }
       coins += reward;
-      final evaluated = evaluateRoute(level, board, parkingCost: parkingCost, usedHint: usedHint);
+      final evaluated = evaluateRoute(
+        level,
+        board,
+        parkingCost: parkingCost,
+        usedHint: usedHint,
+      );
       final previous = records[recordKey];
-      final improved = previous == null || evaluated.score > previous.score || evaluated.stars > previous.stars;
+      final improved =
+          previous == null ||
+          evaluated.score > previous.score ||
+          evaluated.stars > previous.stars;
       if (improved) {
-        records[recordKey] = RouteRecord(score: previous == null ? evaluated.score : (evaluated.score > previous.score ? evaluated.score : previous.score), stars: previous == null ? evaluated.stars : (evaluated.stars > previous.stars ? evaluated.stars : previous.stars), parkingCost: previous == null ? parkingCost : (parkingCost < previous.parkingCost ? parkingCost : previous.parkingCost));
+        records[recordKey] = RouteRecord(
+          score: previous == null
+              ? evaluated.score
+              : (evaluated.score > previous.score
+                    ? evaluated.score
+                    : previous.score),
+          stars: previous == null
+              ? evaluated.stars
+              : (evaluated.stars > previous.stars
+                    ? evaluated.stars
+                    : previous.stars),
+          parkingCost: previous == null
+              ? parkingCost
+              : (parkingCost < previous.parkingCost
+                    ? parkingCost
+                    : previous.parkingCost),
+        );
       }
-      lastResult = RouteResult(score: evaluated.score, stars: evaluated.stars, parkingCost: parkingCost, target: level.parkingTarget, reward: reward, personalBest: improved, ranked: !usedHint && undosUsed == 0 && !board.continued);
-      if (dailyMode && lastResult!.ranked && level.seed == int.parse(_day(clock().toUtc()).replaceAll('-', ''))) {
+      lastResult = RouteResult(
+        score: evaluated.score,
+        stars: evaluated.stars,
+        parkingCost: parkingCost,
+        target: level.parkingTarget,
+        reward: reward,
+        personalBest: improved,
+        ranked: !usedHint && undosUsed == 0 && !board.continued,
+      );
+      if (dailyMode &&
+          lastResult!.ranked &&
+          level.seed == int.parse(_day(clock().toUtc()).replaceAll('-', ''))) {
         final key = '${level.seed}';
-        if (evaluated.score > (rankedDailyScores[key] ?? 0)) rankedDailyScores[key] = evaluated.score;
-        unawaited(leaderboards.submit(DailyScore(level.seed, rankedDailyScores[key]!)).catchError((Object _) => false));
+        if (evaluated.score > (rankedDailyScores[key] ?? 0)) {
+          rankedDailyScores[key] = evaluated.score;
+        }
+        unawaited(
+          leaderboards
+              .submit(DailyScore(level.seed, rankedDailyScores[key]!))
+              .catchError((Object _) => false),
+        );
       }
       totalWins++;
-      _track('level_win', {'moves': board.moves, 'reward': reward, 'score': evaluated.score, 'stars': evaluated.stars, 'parkingCost': parkingCost});
+      _track('level_win', {
+        'moves': board.moves,
+        'reward': reward,
+        'score': evaluated.score,
+        'stars': evaluated.stars,
+        'parkingCost': parkingCost,
+      });
     } else if (board.phase(level) == GamePhase.failed) {
       _track('level_fail', {'moves': board.moves});
     }
@@ -471,7 +575,9 @@ class GameController extends ChangeNotifier {
       coins -= price;
     }
     _epoch++;
-    _track(action.name, {'source': paid ? (price == 0 ? 'free' : 'coins') : 'rewarded'});
+    _track(action.name, {
+      'source': paid ? (price == 0 ? 'free' : 'coins') : 'rewarded',
+    });
     _changed();
     return true;
   }
@@ -479,7 +585,12 @@ class GameController extends ChangeNotifier {
   bool spend(Assist action) => _assist(action, paid: true);
   bool buyCosmetic(String id) {
     final item = cosmeticById(id);
-    if (busy || item == null || ownedCosmetics.contains(id) || coins < item.price) return false;
+    if (busy ||
+        item == null ||
+        ownedCosmetics.contains(id) ||
+        coins < item.price) {
+      return false;
+    }
     coins -= item.price;
     ownedCosmetics.add(id);
     if (item.kind == CosmeticKind.bus) {
@@ -491,6 +602,7 @@ class GameController extends ChangeNotifier {
     _changed();
     return true;
   }
+
   bool equipCosmetic(String id) {
     final item = cosmeticById(id);
     if (busy || item == null || !ownedCosmetics.contains(id)) return false;
@@ -505,13 +617,16 @@ class GameController extends ChangeNotifier {
     _changed();
     return true;
   }
+
   Future<void> showDailyRanking() async {
     if (busy || !leaderboards.enabled) return;
     final seed = int.parse(_day(clock().toUtc()).replaceAll('-', ''));
     final score = rankedDailyScores['$seed'];
     var opened = false;
     try {
-      opened = await leaderboards.open(score == null ? null : DailyScore(seed, score));
+      opened = await leaderboards.open(
+        score == null ? null : DailyScore(seed, score),
+      );
     } catch (_) {
       opened = false;
     }
@@ -520,6 +635,7 @@ class GameController extends ChangeNotifier {
       notifyListeners();
     }
   }
+
   Future<bool> watch(Assist action) async {
     if (!available(action)) {
       return false;

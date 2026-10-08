@@ -27,7 +27,9 @@ class LevelGenerator {
       }
     } else {
       final easy = number % 5 == 0;
-      final indices = easy ? [5, 9, 14, 19, 24] : [3, 7, 10, 12, 15, 16, 17, 20, 21, 22, 23, 25, 26, 27, 28, 29];
+      final indices = easy
+          ? [5, 9, 14, 19, 24]
+          : [3, 7, 10, 12, 15, 16, 17, 20, 21, 22, 23, 25, 26, 27, 28, 29];
       plan = campaign[indices[rng.nextInt(indices.length)]];
       colors.shuffle(rng);
       order.shuffle(rng);
@@ -38,17 +40,36 @@ class LevelGenerator {
     var id = 0;
     void add(RoutePlan part) {
       for (int lane = 0; lane < 3; lane++) {
-        for (final token in part.lanes[lane].split(' ').where((v) => v.isNotEmpty)) {
-          lanes[order[lane]].add(Bus(id++, colors[token.codeUnitAt(0) - 97], capacity: int.parse(token.substring(1))));
+        for (final token
+            in part.lanes[lane].split(' ').where((v) => v.isNotEmpty)) {
+          lanes[order[lane]].add(
+            Bus(
+              id++,
+              colors[token.codeUnitAt(0) - 97],
+              capacity: int.parse(token.substring(1)),
+            ),
+          );
         }
       }
       for (final token in part.queue.split(' ')) {
-        passengers.addAll(List.filled(int.parse(token.substring(1)), colors[token.codeUnitAt(0) - 97]));
+        passengers.addAll(
+          List.filled(
+            int.parse(token.substring(1)),
+            colors[token.codeUnitAt(0) - 97],
+          ),
+        );
       }
     }
+
     add(plan);
     if (extension != null) add(extension);
-    final draft = Level(number: number, seed: actualSeed, lanes: lanes, passengers: passengers, generatorVersion: version);
+    final draft = Level(
+      number: number,
+      seed: actualSeed,
+      lanes: lanes,
+      passengers: passengers,
+      generatorVersion: version,
+    );
     final analysis = GameEngine.analyze(draft);
     final level = Level(
       number: number,
@@ -69,7 +90,9 @@ class LevelGenerator {
       board = move.board;
       board.validate(level);
     }
-    if (board.phase(level) != GamePhase.won) throw StateError('Invalid generator witness');
+    if (board.phase(level) != GamePhase.won) {
+      throw StateError('Invalid generator witness');
+    }
     if (_cache.length >= 32) _cache.remove(_cache.keys.first);
     _cache[key] = level;
     return level;

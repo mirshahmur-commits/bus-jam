@@ -38,7 +38,9 @@ void main(List<String> args) {
       );
       moves++;
     }
-    if (parkingCost != level.parkingTarget) throw StateError('Incorrect parking target $n');
+    if (parkingCost != level.parkingTarget) {
+      throw StateError('Incorrect parking target $n');
+    }
     if (board.phase(level) != GamePhase.won) {
       throw StateError('Not won $n');
     }
