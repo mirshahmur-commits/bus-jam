@@ -27,8 +27,8 @@ Repository: `mirshahmur-commits/bus-jam`. iOS first; no owner Mac required.
 3. Create non-consumable `com.systemcraft.busJam.remove_ads`, set price/localizations,
    agreements/tax/banking if needed, and a sandbox tester.
 4. Add the repository in Codemagic. Reuse an existing App Store Connect API key
-   with access to this app. Match its integration name to **systemcraft-app-store**
-   in YAML, or update that name to your existing integration. Keep keys there.
+   with access to this app. The working YAML uses **MiniPoliglotKey**; retain that existing integration
+   and keep the keys in Codemagic.
 5. Use the existing Codemagic free plan on M2. Codemagic's quota cap controls
    build usage. The workflow requires no manual allowance-confirmation variable.
 6. Start **ios-testflight** only after Actions is green for the selected main commit.
