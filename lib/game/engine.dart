@@ -2,6 +2,42 @@ import 'model.dart';
 
 /// Pure deterministic rules. Only the front bus can enter an empty parking slot.
 class GameEngine {
+  /// Exact minimum settled parking occupancy over a winning path. The graph
+  /// is acyclic: every release removes a bus from its lane. Parked bus order
+  /// remains in the key because equal-colour buses can have different sizes.
+  static RouteAnalysis analyze(Level level, {int maxStates = 100000}) {
+    final memo = <String, ({List<int> route, int cost})?>{};
+    var decisions = 0, losingChoices = 0;
+    ({List<int> route, int cost})? visit(Board board) {
+      if (board.phase(level) == GamePhase.won) return (route: <int>[], cost: 0);
+      if (board.phase(level) == GamePhase.failed) return null;
+      final key = board.searchKey;
+      if (memo.containsKey(key)) return memo[key];
+      if (memo.length >= maxStates) throw StateError('Puzzle analysis budget exhausted');
+      memo[key] = null;
+      ({List<int> route, int cost})? best;
+      var safe = 0, unsafe = 0;
+      for (int lane = 0; lane < board.lanes.length; lane++) {
+        final move = release(level, board, lane);
+        if (!move.accepted) continue;
+        final tail = visit(move.board);
+        if (tail == null) {
+          unsafe++;
+          continue;
+        }
+        safe++;
+        final cost = move.board.parked.length + tail.cost;
+        if (best == null || cost < best.cost) best = (route: [lane, ...tail.route], cost: cost);
+      }
+      if (safe > 0 && unsafe > 0) decisions++;
+      losingChoices += unsafe;
+      memo[key] = best;
+      return best;
+    }
+    final best = visit(Board.initial(level));
+    if (best == null) throw StateError('Unsolvable puzzle');
+    return RouteAnalysis(List.unmodifiable(best.route), best.cost, memo.length, decisions, losingChoices);
+  }
   static MoveResult release(Level level, Board board, int lane) {
     if (board.phase(level) != GamePhase.playing ||
         lane < 0 ||
@@ -99,4 +135,10 @@ class GameEngine {
 
     return visit(start);
   }
+}
+
+class RouteAnalysis {
+  const RouteAnalysis(this.route, this.parkingCost, this.states, this.decisions, this.losingChoices);
+  final List<int> route;
+  final int parkingCost, states, decisions, losingChoices;
 }

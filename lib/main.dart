@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 
 import 'game/controller.dart';
 import 'platform/monetization.dart';
+import 'platform/leaderboards.dart';
 import 'platform/durable_analytics.dart';
 import 'platform/remote_config.dart';
 import 'platform/progress_store.dart';
@@ -29,6 +30,7 @@ Future<void> main() async {
     ads: ads,
     purchases: storeKit,
     analytics: analytics,
+    leaderboards: defaultLeaderboards(),
   );
   await controller.load();
   if (storeKit != null) {

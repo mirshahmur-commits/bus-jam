@@ -118,7 +118,7 @@ void main() {
     expect(c.board.cursor, 3);
     expect(c.spend(Assist.undo), true);
     expect(jsonEncode(c.board.toJson()), jsonEncode(original));
-    expect(c.coins, 130);
+    expect(c.coins, 150);
     expect(c.spend(Assist.undo), false);
   });
   test('BR-22 restart preserves currency and deterministic board', () async {

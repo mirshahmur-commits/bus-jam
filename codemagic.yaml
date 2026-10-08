@@ -21,13 +21,16 @@ workflows:
       - name: Build dependencies
         script: flutter pub get --enforce-lockfile
       - name: Apply signing profiles
-        script: xcode-project use-profiles
+        script: |
+          python3 tool/configure_game_center.py
+          xcode-project use-profiles
       - name: Signed IPA for internal TestFlight
         script: |
           set -euo pipefail
           flutter build ipa --release --no-pub --build-number="$PROJECT_BUILD_NUMBER" \
             --dart-define="ADMOB_REWARDED_ID=${ADMOB_REWARDED_ID:-}" \
             --dart-define="ADMOB_INTERSTITIAL_ID=${ADMOB_INTERSTITIAL_ID:-}" \
+            --dart-define="GAME_CENTER_LEADERBOARD_ID=${GAME_CENTER_LEADERBOARD_ID:-}" \
             --export-options-plist=/Users/builder/export_options.plist
     artifacts:
       - build/ios/ipa/*.ipa

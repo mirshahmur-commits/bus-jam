@@ -1,18 +1,18 @@
 {
-  "version": "1.0.0+1",
-  "source_sha256": "90e8863994843d1a1c5dc07ec7bc97b4a1af82c29c01e2e7b032ae142ece0365",
+  "version": "1.1.0+2",
+  "source_sha256": null,
   "checks": {
     "automated": {
-      "status": "Passed",
-      "evidence": "docs/evidence/github-validation.json"
+      "status": "Not run",
+      "reason": "Bus Surge 1.1 candidate: exact source evidence is produced by GitHub Actions; previous 1.0 evidence does not certify this redesign."
     },
     "business": {
-      "status": "Passed",
-      "evidence": "docs/evidence/github-validation.json"
+      "status": "Not run",
+      "reason": "Bus Surge 1.1 candidate: exact source evidence is produced by GitHub Actions; previous 1.0 evidence does not certify this redesign."
     },
     "ios_uat": {
-      "status": "Passed",
-      "evidence": "docs/evidence/ios-validation.json"
+      "status": "Not run",
+      "reason": "Bus Surge 1.1 candidate: exact source evidence is produced by GitHub Actions; previous 1.0 evidence does not certify this redesign."
     },
     "ios_build": {
       "status": "Not run",
@@ -31,8 +31,12 @@
       "reason": "Owner store metadata and privacy URL required"
     },
     "ios_simulator_build": {
-      "status": "Passed",
-      "evidence": "docs/evidence/ios-validation.json"
+      "status": "Not run",
+      "reason": "Bus Surge 1.1 candidate: exact source evidence is produced by GitHub Actions; previous 1.0 evidence does not certify this redesign."
+    },
+    "game_center_sandbox": {
+      "status": "Not run",
+      "reason": "Optional Game Center product/capability configuration and real-device sandbox verification required before enabling the daily leaderboard."
     }
   }
 }

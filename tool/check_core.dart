@@ -23,12 +23,14 @@ void main(List<String> args) {
       throw StateError('Non-determinism $n');
     }
     var board = Board.initial(level);
+    var parkingCost = 0;
     for (final lane in level.solution) {
       final result = GameEngine.release(level, board, lane);
       if (!result.accepted) {
         throw StateError('Blocked witness $n');
       }
       board = result.board;
+      parkingCost += board.parked.length;
       board.validate(level);
       Board.fromJson(
         jsonDecode(jsonEncode(board.toJson())) as Map<String, dynamic>,
@@ -36,6 +38,7 @@ void main(List<String> args) {
       );
       moves++;
     }
+    if (parkingCost != level.parkingTarget) throw StateError('Incorrect parking target $n');
     if (board.phase(level) != GamePhase.won) {
       throw StateError('Not won $n');
     }

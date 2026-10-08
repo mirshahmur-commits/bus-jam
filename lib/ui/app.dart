@@ -6,7 +6,9 @@ import 'package:flutter/services.dart';
 
 import '../game/controller.dart';
 import '../game/model.dart';
+import '../game/progression.dart';
 import 'art.dart';
+import 'depot_preview.dart';
 import 'game_scene.dart';
 import 'urban_assets.dart';
 
@@ -83,7 +85,7 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
         settling = true;
       });
       settleTimer?.cancel();
-      settleTimer = Timer(const Duration(milliseconds: 1000), () {
+      settleTimer = Timer(const Duration(milliseconds: 460), () {
         if (mounted) {
           setState(() {
             settling = false;
@@ -126,7 +128,7 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) => MaterialApp(
     debugShowCheckedModeBanner: false,
-    title: 'Bus Jam',
+    title: 'Bus Surge',
     scaffoldMessengerKey: messenger,
     navigatorKey: navigator,
     theme: ThemeData(
@@ -157,6 +159,20 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
           }
         },
         child: Scaffold(
+          bottomNavigationBar: page == 1 ? null : NavigationBar(
+            selectedIndex: page == 0 ? 0 : page - 1,
+            onDestinationSelected: (index) {
+              if (!c.busy) setState(() => page = index == 0 ? 0 : index + 1);
+            },
+            backgroundColor: cream,
+            height: 68,
+            destinations: const [
+              NavigationDestination(icon: Icon(Icons.home_rounded), label: 'Depot'),
+              NavigationDestination(icon: Icon(Icons.route_rounded), label: 'Map'),
+              NavigationDestination(icon: Icon(Icons.directions_bus_rounded), label: 'Garage'),
+              NavigationDestination(icon: Icon(Icons.emoji_events_rounded), label: 'Records'),
+            ],
+          ),
           body: Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -182,7 +198,11 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
                                   ? homePage(context)
                                   : page == 1
                                   ? gamePage(context)
-                                  : levelsPage(context),
+                                  : page == 2
+                                  ? levelsPage(context)
+                                  : page == 3
+                                  ? garagePage(context)
+                                  : recordsPage(context),
                             ),
                             if (c.busy)
                               Positioned.fill(
@@ -300,469 +320,133 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
   );
   Widget homePage(BuildContext context) => SingleChildScrollView(
     key: const ValueKey('home'),
-    padding: const EdgeInsets.fromLTRB(25, 20, 25, 24),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Expanded(
-              child: Text(
-                'SYSTEMCRAFT\nGAMES',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 2,
-                  color: ink,
-                ),
-              ),
-            ),
-            pill(
-              Icons.monetization_on_rounded,
-              '${c.coins}',
-              color: const Color(0xFFAB7A25),
-            ),
-            const SizedBox(width: 9),
-            circleButton(
-              Icons.tune_rounded,
-              () => settings(context),
-              tip: 'Settings',
-              key: const ValueKey('settings'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 25),
-        const Text(
-          'CITY TRAFFIC.\nYOUR NEXT MOVE.',
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-            color: teal,
-            height: 1.4,
-          ),
-        ),
-        const SizedBox(height: 9),
-        const SizedBox(
-          height: 67,
-          width: double.infinity,
-          child: UrbanArtwork(
-            'wordmark',
-            key: ValueKey('wordmark'),
-            label: 'BUS JAM',
-          ),
-        ),
+    padding: const EdgeInsets.fromLTRB(22, 16, 22, 22),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        const Expanded(child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text('BUS SURGE', key: ValueKey('wordmark'), style: TextStyle(fontSize: 25, fontWeight: FontWeight.w900, letterSpacing: -.6)))),
+        pill(Icons.monetization_on_rounded, '${c.coins}', color: const Color(0xFFAB7A25)),
+        const SizedBox(width: 5),
+        circleButton(Icons.tune_rounded, () => settings(context), tip: 'Settings', key: const ValueKey('settings')),
+      ]),
+      const SizedBox(height: 20),
+      Row(children: [Expanded(child: Text(c.rank, style: const TextStyle(color: teal, fontWeight: FontWeight.w800))), Text('${c.totalStars} ★', style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFFAE7D28)))]),
+      const SizedBox(height: 7),
+      const Text('Your next\nperfect dispatch.', style: TextStyle(fontSize: 31, fontWeight: FontWeight.w900, height: 1.08, letterSpacing: -.8)),
+      const SizedBox(height: 16),
+      primary('Continue · Route ${c.board.phase(c.level) == GamePhase.won ? c.unlocked : c.level.number}', () {
+        if (c.dailyMode) c.returnToCampaign();
+        if (c.board.phase(c.level) == GamePhase.won) c.openLevel(c.unlocked);
+        play();
+      }, key: const ValueKey('play'), icon: Icons.play_arrow_rounded),
+      const SizedBox(height: 15),
+      SizedBox(height: 150, width: double.infinity, child: DepotPreview(skin: c.selectedBus, terminal: c.selectedTerminal)),
+      const SizedBox(height: 14),
+      card(InkWell(key: const ValueKey('garage-goal'), onTap: () => setState(() => page = 3), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [const Icon(Icons.auto_awesome_rounded, color: teal, size: 20), const SizedBox(width: 8), Expanded(child: Text(c.ownedCosmetics.length == cosmetics.length ? 'Your collection is complete' : 'Next: ${c.nextCollectible.name}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16))), const Icon(Icons.chevron_right_rounded, color: teal)]),
         const SizedBox(height: 7),
-        const Text(
-          'Find the order. Feel the flow.',
-          style: TextStyle(color: Color(0xFF6F8274), fontSize: 15),
-        ),
-        const SizedBox(height: 23),
-        SizedBox(
-          height: 245,
-          width: double.infinity,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: CustomPaint(painter: CityPainter(hero: true)),
-          ),
-        ),
-        const SizedBox(height: 23),
-        primary(
-          c.board.phase(c.level) == GamePhase.won
-              ? 'Route ${c.unlocked} awaits'
-              : 'Play route ${c.level.number}',
-          () {
-            if (c.board.phase(c.level) == GamePhase.won) {
-              c.openLevel(c.unlocked);
-            }
-            play();
-          },
-          key: const ValueKey('play'),
-        ),
-        const SizedBox(height: 17),
-        card(
-          InkWell(
-            key: const ValueKey('daily'),
-            onTap: () {
-              c.openDaily();
-              play();
-            },
-            child: Row(
-              children: [
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF9E3B6),
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  child: const Icon(
-                    Icons.wb_sunny_rounded,
-                    color: Color(0xFFBD8732),
-                  ),
-                ),
-                const SizedBox(width: 13),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Daily detour',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w900,
-                          fontSize: 17,
-                        ),
-                      ),
-                      Text(
-                        c.completedDay ==
-                                DateTime.now().toIso8601String().substring(
-                                  0,
-                                  10,
-                                )
-                            ? 'Complete · Come back tomorrow'
-                            : 'A new route. Every day.',
-                        style: const TextStyle(
-                          color: Color(0xFF74847A),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.chevron_right_rounded, color: teal),
-              ],
-            ),
-          ),
-          color: const Color(0xFFFFFBED),
-        ),
-        const SizedBox(height: 17),
-        Wrap(
-          alignment: WrapAlignment.spaceBetween,
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            TextButton.icon(
-              key: const ValueKey('routes'),
-              onPressed: () => setState(() => page = 2),
-              icon: const Icon(Icons.route_rounded),
-              label: const Text('Your routes'),
-            ),
-            pill(
-              Icons.local_fire_department_rounded,
-              '${c.streak} day streak',
-              color: const Color(0xFFA37746),
-            ),
-          ],
-        ),
-        if (c.saveFailed)
-          const Text(
-            'Progress could not be saved. Check available device storage.',
-            style: TextStyle(color: Colors.red),
-          ),
-      ],
-    ),
+        Text(c.ownedCosmetics.length == cosmetics.length ? 'Pick a favourite in your garage.' : c.coins >= c.nextCollectible.price ? 'Ready to unlock in your garage.' : '${c.nextCollectible.price - c.coins} more coins to make it yours.', style: const TextStyle(color: Color(0xFF687789), fontSize: 12)),
+        const SizedBox(height: 8),
+        ClipRRect(borderRadius: BorderRadius.circular(6), child: LinearProgressIndicator(value: c.ownedCosmetics.length == cosmetics.length ? 1 : (c.coins / c.nextCollectible.price).clamp(0.0, 1.0), color: teal, backgroundColor: const Color(0xFFDDE8E7), minHeight: 5)),
+      ]))),
+      const SizedBox(height: 14),
+      card(InkWell(key: const ValueKey('daily'), onTap: () { c.openDaily(); play(); }, child: Row(children: [
+        const Icon(Icons.wb_sunny_rounded, color: Color(0xFFBA852E), size: 28), const SizedBox(width: 12),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Daily dispatch', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17)), Text(c.dailyRecord == null ? 'One shared puzzle · 75 coins' : 'Best ${c.dailyRecord!.score} · ${c.streak} day streak', style: const TextStyle(color: Color(0xFF687789), fontSize: 12))])),
+        const Icon(Icons.chevron_right_rounded, color: teal),
+      ])), color: const Color(0xFFFFF8E8)),
+      const SizedBox(height: 7),
+      TextButton.icon(key: const ValueKey('routes'), onPressed: () => setState(() => page = 2), icon: const Icon(Icons.route_rounded), label: Text('${c.unlocked - 1} routes cleared · Explore the map')),
+      if (c.saveFailed) const Text('Progress could not be saved. Check available device storage.', style: TextStyle(color: Colors.red)),
+    ]),
   );
+
   Widget gamePage(BuildContext context) {
     final phase = c.board.phase(c.level);
-    return LayoutBuilder(
-      builder: (context, con) {
-        final boardHeight = con.maxHeight > 780
-            ? minBoardHeight(c, con.maxHeight - 290)
-            : minBoardHeight(c, 440);
-        return Stack(
-          children: [
-            SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(19, 15, 19, 20),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      circleButton(
-                        Icons.arrow_back_rounded,
-                        home,
-                        tip: 'Home',
-                        key: const ValueKey('home-button'),
-                      ),
-                      const Spacer(),
-                      Column(
-                        children: [
-                          Text(
-                            c.dailyMode ? 'DAILY DETOUR' : c.level.district,
-                            style: const TextStyle(
-                              fontSize: 9,
-                              letterSpacing: 1.8,
-                              fontWeight: FontWeight.w800,
-                              color: teal,
-                            ),
-                          ),
-                          Text(
-                            c.dailyMode
-                                ? 'Today’s route'
-                                : 'Route ${c.level.number}',
-                            style: const TextStyle(
-                              fontSize: 23,
-                              fontWeight: FontWeight.w900,
-                              color: ink,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Spacer(),
-                      circleButton(
-                        Icons.tune_rounded,
-                        () => settings(context),
-                        tip: 'Settings',
-                        key: const ValueKey('game-settings'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 17),
-                  Row(
-                    children: [
-                      Text(
-                        '${c.board.cursor} / ${c.level.passengers.length} home',
-                        style: const TextStyle(
-                          color: ink,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const Spacer(),
-                      pill(
-                        Icons.monetization_on_rounded,
-                        '${c.coins}',
-                        color: const Color(0xFFAB7A25),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 9),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: LinearProgressIndicator(
-                      value: c.board.cursor / c.level.passengers.length,
-                      minHeight: 6,
-                      color: teal,
-                      backgroundColor: const Color(0xFFD8E3D5),
-                    ),
-                  ),
-                  const SizedBox(height: 17),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: SizedBox(
-                      height: boardHeight,
-                      child: GameScene(
-                        key: ValueKey('scene-${c.level.seed}'),
-                        controller: c,
-                        onMove: onMove,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    c.hintLane != null
-                        ? 'The glowing bus has a winning route.'
-                        : c.level.number <= 3
-                        ? 'Match the first passenger. Full buses leave automatically.'
-                        : 'Keep a parking space open. Think one bus ahead.',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF6F8274),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  Row(
-                    children: [
-                      toolButton(
-                        context,
-                        Assist.undo,
-                        Icons.undo_rounded,
-                        'Undo',
-                      ),
-                      const SizedBox(width: 10),
-                      toolButton(
-                        context,
-                        Assist.hint,
-                        Icons.lightbulb_outline_rounded,
-                        'Hint',
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: OutlinedButton(
-                          key: const ValueKey('restart'),
-                          onPressed: c.busy
-                              ? null
-                              : () => confirmRestart(context),
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size(0, 58),
-                            side: const BorderSide(color: Color(0xFFCEDBD0)),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: const Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.refresh_rounded, size: 22),
-                              Text(
-                                'Restart',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (c.saveFailed)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 8),
-                      child: Text(
-                        'Save unavailable',
-                        style: TextStyle(color: Colors.red),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            if (phase != GamePhase.playing && !settling)
-              resultOverlay(context, phase),
-          ],
-        );
-      },
-    );
+    return LayoutBuilder(builder: (context, constraints) => Stack(children: [
+      SingleChildScrollView(padding: const EdgeInsets.fromLTRB(18, 12, 18, 20), child: Column(children: [
+        Row(children: [
+          circleButton(Icons.arrow_back_rounded, home, tip: 'Home', key: const ValueKey('home-button')),
+          Expanded(child: Column(children: [
+            Text(c.dailyMode ? 'DAILY DISPATCH' : c.level.hard ? 'CHALLENGE ROUTE' : c.level.district, style: const TextStyle(fontSize: 9, letterSpacing: 1.3, color: teal, fontWeight: FontWeight.w900)),
+            Text(c.dailyMode ? 'Today’s route' : 'Route ${c.level.number}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
+          ])),
+          circleButton(Icons.tune_rounded, () => settings(context), tip: 'Settings', key: const ValueKey('game-settings')),
+        ]),
+        const SizedBox(height: 10),
+        Row(children: [Expanded(child: Text('${c.board.cursor} / ${c.level.passengers.length} delivered', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800))), pill(Icons.monetization_on_rounded, '${c.coins}', color: const Color(0xFFAB7A25))]),
+        const SizedBox(height: 7),
+        ClipRRect(borderRadius: BorderRadius.circular(7), child: LinearProgressIndicator(value: c.board.cursor / c.level.passengers.length, minHeight: 5, color: teal, backgroundColor: const Color(0xFFD9E3E5))),
+        Row(children: [Expanded(child: Text(c.level.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14))), TextButton.icon(key: const ValueKey('queue-preview'), onPressed: () => previewQueue(context), icon: const Icon(Icons.visibility_outlined, size: 17), label: const Text('Plan', style: TextStyle(fontSize: 12)))]),
+        ClipRRect(borderRadius: BorderRadius.circular(22), child: SizedBox(height: SceneLayout.heightFor(constraints.maxWidth - 36, c.level), child: GameScene(key: ValueKey('scene-${c.level.generatorVersion}-${c.level.number}-${c.level.seed}'), controller: c, onMove: onMove))),
+        const SizedBox(height: 10),
+        Row(children: [const Icon(Icons.star_rounded, color: Color(0xFFB9852E), size: 18), const SizedBox(width: 5), Expanded(child: Text('Perfect route: parking cost ≤ ${c.level.parkingTarget}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800))), Text('${c.parkingCost}', key: const ValueKey('parking-cost'), style: TextStyle(fontWeight: FontWeight.w900, color: c.parkingCost > c.level.parkingTarget ? const Color(0xFFB77A36) : teal)), IconButton(onPressed: () => scoreHelp(context), icon: const Icon(Icons.info_outline_rounded, size: 18), visualDensity: VisualDensity.compact)]),
+        Text(c.hintLane == null ? c.level.lesson : 'The glowing bus leads to a winning route.', textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: Color(0xFF687789))),
+        const SizedBox(height: 13),
+        Row(children: [toolButton(context, Assist.undo, Icons.undo_rounded, 'Undo'), const SizedBox(width: 9), toolButton(context, Assist.hint, Icons.lightbulb_outline_rounded, 'Hint'), const SizedBox(width: 9), Expanded(child: OutlinedButton(key: const ValueKey('restart'), onPressed: c.busy ? null : () => confirmRestart(context), style: OutlinedButton.styleFrom(minimumSize: const Size(0, 58), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))), child: const Column(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.refresh_rounded, size: 22), Text('Restart', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800))])))]),
+        if (c.saveFailed) const Padding(padding: EdgeInsets.only(top: 8), child: Text('Save unavailable', style: TextStyle(color: Colors.red))),
+      ])),
+      if (phase != GamePhase.playing && !settling) resultOverlay(context, phase),
+    ]));
   }
 
-  double minBoardHeight(GameController c, double proposed) {
-    final depth = c.board.lanes
-        .map((l) => l.length.clamp(1, 4))
-        .fold(1, (a, b) => a > b ? a : b);
-    final needed = 95 + 104 + 85 + (depth - 1) * 34 + 104 + 20;
-    return needed.toDouble();
-  }
+  Future<void> previewQueue(BuildContext context) => sheet(context, Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    const Text('Plan your dispatch', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900)),
+    const SizedBox(height: 8),
+    const Text('Passengers board in this order. Looking ahead is always free.'),
+    const SizedBox(height: 16),
+    Wrap(spacing: 5, runSpacing: 5, children: [for (int i = c.board.cursor; i < c.level.passengers.length; i++) Chip(label: Text('${i - c.board.cursor + 1}', style: const TextStyle(fontWeight: FontWeight.w900)), avatar: Icon(Icons.person_rounded, color: ink, size: 18), backgroundColor: busColors[c.level.passengers[i].index], side: BorderSide.none, padding: EdgeInsets.zero)]),
+    const SizedBox(height: 16),
+    for (int lane = 0; lane < c.board.lanes.length; lane++) ...[
+      Text('Exit ${lane + 1} · front bus first', style: const TextStyle(fontWeight: FontWeight.w900)),
+      Wrap(spacing: 5, children: [for (final bus in c.board.lanes[lane]) Chip(label: Text('${colorNames[bus.color.index]} · ${bus.capacity}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800)), backgroundColor: busColors[bus.color.index].withValues(alpha: .55), side: BorderSide.none)]),
+    ],
+  ]));
 
-  Widget toolButton(
-    BuildContext context,
-    Assist action,
-    IconData icon,
-    String text,
-  ) => Expanded(
-    child: FilledButton.tonal(
-      key: ValueKey(action.name),
-      onPressed: c.available(action) ? () => assist(context, action) : null,
-      style: FilledButton.styleFrom(
-        backgroundColor: Colors.white,
-        foregroundColor: ink,
-        minimumSize: const Size(0, 58),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 22),
-          Text(
-            text,
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
-          ),
-        ],
-      ),
-    ),
-  );
+  Future<void> scoreHelp(BuildContext context) => sheet(context, const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    Text('A perfect dispatch', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900)),
+    SizedBox(height: 16),
+    Text('★ Finish the route.\n★★ Finish with the original parking spaces.\n★★★ Match the route’s parking target without a hint.\n\nParking cost adds the number of waiting buses after each move. A lower total means a cleaner route. One free undo lets you learn; it does not remove a star.\n\nScore: 1,000 for completion, up to 600 for parking efficiency, 250 for original spaces and 150 without hints. Daily ranking accepts runs without hints, undos or extra spaces.', style: TextStyle(height: 1.6)),
+  ]));
+
+  Widget toolButton(BuildContext context, Assist action, IconData icon, String text) => Expanded(child: FilledButton.tonal(
+    key: ValueKey(action.name),
+    onPressed: c.available(action) ? () { if (c.cost(action) == 0) { c.spend(action); } else { assist(context, action); } } : null,
+    style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: ink, minimumSize: const Size(0, 58), padding: const EdgeInsets.symmetric(horizontal: 5), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+    child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(icon, size: 21), Text('$text · ${c.cost(action) == 0 ? 'FREE' : c.cost(action)}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900))]),
+  ));
+
   Widget resultOverlay(BuildContext context, GamePhase phase) {
     final won = phase == GamePhase.won;
-    return Positioned.fill(
-      child: Container(
-        color: cream.withValues(alpha: .88),
-        alignment: Alignment.center,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(29),
-          child: card(
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(
-                  width: double.infinity,
-                  height: 132,
-                  child: UrbanArtwork(won ? 'win' : 'fail'),
-                ),
-                const SizedBox(height: 19),
-                Text(
-                  won ? 'Smooth operator!' : 'A little traffic…',
-                  key: ValueKey(won ? 'win' : 'fail'),
-                  style: const TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w900,
-                    color: ink,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  won
-                      ? 'Everyone’s on their way.\nYou made that look easy.'
-                      : 'Parking is full.\nA different order will clear the jam.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Color(0xFF6F8274), height: 1.5),
-                ),
-                const SizedBox(height: 19),
-                if (won)
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      pill(
-                        Icons.directions_bus_rounded,
-                        '${c.board.departed} buses',
-                      ),
-                      const SizedBox(width: 8),
-                      pill(
-                        Icons.check_circle_rounded,
-                        'All aboard',
-                        color: teal,
-                      ),
-                    ],
-                  ),
-                const SizedBox(height: 23),
-                if (won)
-                  primary(c.dailyMode ? 'Back to my routes' : 'Next route', () {
-                    if (c.dailyMode) {
-                      home();
-                    } else {
-                      unawaited(c.next());
-                    }
-                  }, key: const ValueKey('next'))
-                else ...[
-                  if (!c.board.continued)
-                    primary(
-                      'One extra space',
-                      () => assist(context, Assist.extraSlot),
-                      key: const ValueKey('continue'),
-                      icon: Icons.add_rounded,
-                    ),
-                  const SizedBox(height: 10),
-                  if (c.history.isNotEmpty)
-                    TextButton(
-                      key: const ValueKey('fail-undo'),
-                      onPressed: () => assist(context, Assist.undo),
-                      child: const Text('Undo the last bus'),
-                    ),
-                  TextButton(
-                    key: const ValueKey('fail-restart'),
-                    onPressed: c.restart,
-                    child: const Text('Start this route again'),
-                  ),
-                ],
-                const SizedBox(height: 8),
-                TextButton(onPressed: home, child: const Text('Home')),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+    final result = c.lastResult;
+    return Positioned.fill(child: ColoredBox(color: cream.withValues(alpha: .96), child: Center(child: SingleChildScrollView(padding: const EdgeInsets.all(25), child: card(Column(mainAxisSize: MainAxisSize.min, children: [
+      SizedBox(height: won ? 90 : 100, width: double.infinity, child: UrbanArtwork(won ? 'win' : 'fail')),
+      const SizedBox(height: 12),
+      Text(won ? result?.stars == 3 ? 'Perfect dispatch!' : 'Route complete!' : 'Terminal full', key: ValueKey(won ? 'win' : 'fail'), textAlign: TextAlign.center, style: const TextStyle(fontSize: 27, fontWeight: FontWeight.w900)),
+      if (won) ...[
+        const SizedBox(height: 10),
+        Row(key: const ValueKey('result-stars'), mainAxisAlignment: MainAxisAlignment.center, children: [for (int i = 0; i < 3; i++) Icon(i < (result?.stars ?? 1) ? Icons.star_rounded : Icons.star_outline_rounded, size: 43, color: const Color(0xFFE2AD3C))]),
+        const SizedBox(height: 7),
+        Text('${result?.score ?? 1000}', key: const ValueKey('score'), style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w900, color: teal)),
+        Text(result?.personalBest == true ? 'NEW PERSONAL BEST' : 'DISPATCH SCORE', key: const ValueKey('personal-best'), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.4)),
+        const SizedBox(height: 12),
+        Wrap(alignment: WrapAlignment.center, spacing: 8, runSpacing: 7, children: [pill(Icons.monetization_on_rounded, '+${result?.reward ?? 0}', color: const Color(0xFFAB7A25)), pill(Icons.local_parking_rounded, '${result?.parkingCost ?? c.parkingCost} / ${c.level.parkingTarget}')]),
+        const SizedBox(height: 12),
+        Text(c.dailyMode ? result?.ranked == true ? 'Clean run · ready for daily ranking.' : 'Practice result · assists used.' : '${10 - ((c.unlocked - 1) % 10)} routes to the next district.', textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: Color(0xFF687789))),
+        const SizedBox(height: 19),
+        primary(c.dailyMode ? 'Back to my routes' : 'Next route', () { if (c.dailyMode) { home(); } else { unawaited(c.next()); } }, key: const ValueKey('next')),
+        if (c.dailyMode && c.leaderboards.enabled) TextButton.icon(key: const ValueKey('daily-ranking'), onPressed: () => unawaited(c.showDailyRanking()), icon: const Icon(Icons.leaderboard_rounded), label: const Text('Daily leaderboard')),
+        TextButton(key: const ValueKey('replay'), onPressed: c.restart, child: const Text('Replay for a better result')),
+        TextButton(key: const ValueKey('win-garage'), onPressed: () { c.returnToCampaign(); setState(() => page = 3); }, child: const Text('Visit my garage')),
+      ] else ...[
+        const SizedBox(height: 10),
+        Text('${c.board.slots} spaces are occupied. ${colorNames[c.level.passengers[c.board.cursor].index]} passengers need their bus.\nTry a different release order.', textAlign: TextAlign.center, style: const TextStyle(height: 1.5, color: Color(0xFF687789))),
+        const SizedBox(height: 20),
+        if (c.history.isNotEmpty) primary(c.cost(Assist.undo) == 0 ? 'Undo · FREE' : 'Undo the last bus', () { if (c.cost(Assist.undo) == 0) { c.spend(Assist.undo); } else { assist(context, Assist.undo); } }, key: const ValueKey('fail-undo'), icon: Icons.undo_rounded),
+        if (!c.board.continued) TextButton(key: const ValueKey('continue'), onPressed: () => assist(context, Assist.extraSlot), child: Text('Extra space · ${c.cost(Assist.extraSlot)} coins')),
+        TextButton(key: const ValueKey('fail-restart'), onPressed: c.restart, child: const Text('Restart this route')),
+      ],
+      TextButton(onPressed: home, child: const Text('Home')),
+    ]))))));
   }
 
   Widget levelsPage(BuildContext context) => Column(
@@ -783,14 +467,14 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
                 ),
               ),
             ),
-            pill(Icons.check_rounded, '${c.unlocked - 1}'),
+            pill(Icons.star_rounded, '${c.totalStars}'),
           ],
         ),
       ),
       const Padding(
         padding: EdgeInsets.only(bottom: 18),
         child: Text(
-          'Clear the city, one route at a time.',
+          'Collect stars. Open the next district.',
           style: TextStyle(color: teal),
         ),
       ),
@@ -834,8 +518,7 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
                           ),
                         )
                       : const Icon(Icons.lock_outline_rounded, size: 20),
-                  if (complete)
-                    const Icon(Icons.check_rounded, size: 15, color: teal),
+                  if (complete) Text(c.routeRecord(n) == null ? '✓' : List.filled(c.routeRecord(n)!.stars, '★').join(), style: const TextStyle(fontSize: 11, color: teal, fontWeight: FontWeight.w900)),
                 ],
               ),
             );
@@ -844,6 +527,51 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
       ),
     ],
   );
+  Widget garagePage(BuildContext context) => SingleChildScrollView(
+    key: const ValueKey('garage'), padding: const EdgeInsets.all(22),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [circleButton(Icons.arrow_back_rounded, home, tip: 'Home', key: const ValueKey('garage-back')), const SizedBox(width: 10), const Expanded(child: Text('Your garage', style: TextStyle(fontSize: 27, fontWeight: FontWeight.w900))), pill(Icons.monetization_on_rounded, '${c.coins}', color: const Color(0xFFAB7A25))]),
+      const SizedBox(height: 10),
+      const Text('Earn coins on routes. Make your fleet your own.', style: TextStyle(color: Color(0xFF687789))),
+      const SizedBox(height: 17),
+      for (final kind in CosmeticKind.values) ...[
+        Text(kind == CosmeticKind.bus ? 'THE FLEET' : 'YOUR TERMINAL', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 1.5, color: teal)),
+        const SizedBox(height: 12),
+        for (final item in cosmetics.where((item) => item.kind == kind)) ...[
+          card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            SizedBox(height: 108, width: double.infinity, child: DepotPreview(skin: kind == CosmeticKind.bus ? item.id : c.selectedBus, terminal: kind == CosmeticKind.terminal ? item.id : c.selectedTerminal, busOnly: kind == CosmeticKind.bus)),
+            const SizedBox(height: 12),
+            Text(item.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 4),
+            Text(item.description, style: const TextStyle(fontSize: 12, color: Color(0xFF687789))),
+            const SizedBox(height: 12),
+            primary((kind == CosmeticKind.bus ? c.selectedBus : c.selectedTerminal) == item.id ? 'Equipped' : c.ownedCosmetics.contains(item.id) ? 'Equip' : 'Unlock · ${item.price} coins', (kind == CosmeticKind.bus ? c.selectedBus : c.selectedTerminal) == item.id ? null : c.ownedCosmetics.contains(item.id) ? () => c.equipCosmetic(item.id) : c.coins >= item.price ? () => c.buyCosmetic(item.id) : null, key: ValueKey('cosmetic-${item.id}'), icon: c.ownedCosmetics.contains(item.id) ? Icons.check_rounded : Icons.monetization_on_rounded),
+            if (!c.ownedCosmetics.contains(item.id) && c.coins < item.price) Padding(padding: const EdgeInsets.only(top: 7), child: Text('${item.price - c.coins} more coins needed', style: const TextStyle(fontSize: 11, color: Color(0xFF687789)))),
+          ])),
+          const SizedBox(height: 14),
+        ],
+      ],
+    ]),
+  );
+
+  Widget recordsPage(BuildContext context) => SingleChildScrollView(
+    key: const ValueKey('records'), padding: const EdgeInsets.all(22),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [circleButton(Icons.arrow_back_rounded, home, tip: 'Home', key: const ValueKey('records-back')), const SizedBox(width: 12), const Expanded(child: Text('Your records', style: TextStyle(fontSize: 27, fontWeight: FontWeight.w900)))]),
+      const SizedBox(height: 18),
+      card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(c.rank, style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w900, color: teal)), const SizedBox(height: 10), Text('${c.totalStars} stars · ${c.perfectRoutes} perfect routes', style: const TextStyle(fontWeight: FontWeight.w800)), const SizedBox(height: 8), const Text('15 stars: City Dispatcher\n45 stars: Route Expert\n90 stars: Depot Master', style: TextStyle(fontSize: 12, height: 1.5, color: Color(0xFF687789)))])),
+      const SizedBox(height: 16),
+      card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Daily dispatch', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)), const SizedBox(height: 8), Text(c.dailyRecord == null ? 'Today’s puzzle is waiting.' : 'Today’s personal best: ${c.dailyRecord!.score}'), const SizedBox(height: 10), primary('Play today’s route', () { c.openDaily(); play(); }, key: const ValueKey('records-daily'), icon: Icons.wb_sunny_rounded)])),
+      if (c.leaderboards.enabled) TextButton.icon(key: const ValueKey('game-center'), onPressed: () => unawaited(c.showDailyRanking()), icon: const Icon(Icons.leaderboard_rounded), label: const Text('Daily leaderboard')),
+      const SizedBox(height: 19),
+      const Text('PERSONAL BESTS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: teal)),
+      const SizedBox(height: 9),
+      if (c.totalStars == 0) const Text('Finish your first route to set a record.'),
+      for (final entry in c.records.entries.where((e) => e.key.startsWith('2:')).toList()..sort((a, b) => int.parse(a.key.split(':').last).compareTo(int.parse(b.key.split(':').last))))
+        ListTile(contentPadding: EdgeInsets.zero, title: Text('Route ${entry.key.split(':').last}', style: const TextStyle(fontWeight: FontWeight.w900)), subtitle: Text(List.filled(entry.value.stars, '★').join()), trailing: Text('${entry.value.score}', style: const TextStyle(fontWeight: FontWeight.w900, color: teal)), onTap: () { c.openLevel(int.parse(entry.key.split(':').last)); play(); }),
+    ]),
+  );
+
   Future<void> sheet(BuildContext context, Widget child) =>
       showModalBottomSheet<void>(
         context: context,
@@ -861,7 +589,10 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
               25,
               25 + MediaQuery.viewInsetsOf(ctx).bottom,
             ),
-            child: child,
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Align(alignment: Alignment.centerRight, child: IconButton(key: const ValueKey('sheet-close'), onPressed: () => Navigator.pop(ctx), tooltip: 'Close', icon: const Icon(Icons.close_rounded))),
+              child,
+            ]),
           ),
         ),
       );
@@ -1129,7 +860,7 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
             ),
             const SizedBox(height: 14),
             const Text(
-              'BUS JAM  /  1.0.0\nMade for a little everyday joy.',
+              'BUS SURGE  /  1.1.0\nYour city. Your next move.',
               style: TextStyle(
                 color: Color(0xFF8E9B8E),
                 fontSize: 11,

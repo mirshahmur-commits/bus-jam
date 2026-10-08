@@ -1,71 +1,82 @@
 import 'dart:math';
 
+import 'campaign.dart';
 import 'engine.dart';
 import 'model.dart';
 
 class LevelGenerator {
-  static const version = 1;
+  static const version = 2;
+  final _cache = <String, Level>{};
+
   Level generate(int number, {int? seed}) {
-    if (number < 1) {
-      throw ArgumentError.value(number);
-    }
+    if (number < 1) throw ArgumentError.value(number);
     final actualSeed = seed ?? number * 7919 + 104729;
+    final key = '$number/$actualSeed';
+    if (_cache.containsKey(key)) return _cache[key]!;
     final rng = Random(actualSeed);
-    final colors = (BusColor.values.toList()..shuffle(rng))
-        .take(min(6, 2 + number ~/ 8))
-        .toList();
-    final lanes = List.generate(number < 4 ? 2 : 3, (_) => <Bus>[]);
-    final passengers = <BusColor>[];
-    final solution = <int>[];
-    final waves = min(6, 2 + number ~/ 6);
-    var id = 0;
-    for (int wave = 0; wave < waves; wave++) {
-      final groupSize = number <= 2
-          ? 1
-          : min(3, 2 + (number >= 12 && wave.isOdd ? 1 : 0));
-      final waveColors = (colors.toList()..shuffle(rng))
-          .take(groupSize)
-          .toList();
-      if (number <= 2) {
-        waveColors[0] = colors[wave % colors.length];
+    final colors = BusColor.values.toList();
+    final order = [0, 1, 2];
+    RoutePlan plan;
+    RoutePlan? extension;
+    if (number <= campaign.length) {
+      plan = campaign[number - 1];
+      // The authored campaign is fixed. Daily permutations share a UTC seed.
+      if (seed != null) {
+        colors.shuffle(rng);
+        order.shuffle(rng);
       }
-      final wavePassengers = <BusColor>[];
-      for (final color in waveColors) {
-        final lane = rng.nextInt(lanes.length);
-        lanes[lane].add(Bus(id++, color));
-        solution.add(lane);
-        wavePassengers.addAll(List.filled(3, color));
-      }
-      if (number >= 5) {
-        wavePassengers.shuffle(rng);
-      }
-      passengers.addAll(wavePassengers);
+    } else {
+      final easy = number % 5 == 0;
+      final indices = easy ? [5, 9, 14, 19, 24] : [3, 7, 10, 12, 15, 16, 17, 20, 21, 22, 23, 25, 26, 27, 28, 29];
+      plan = campaign[indices[rng.nextInt(indices.length)]];
+      colors.shuffle(rng);
+      order.shuffle(rng);
+      if (!easy && number.isEven) extension = campaign[6 + rng.nextInt(9)];
     }
+    final lanes = List.generate(3, (_) => <Bus>[]);
+    final passengers = <BusColor>[];
+    var id = 0;
+    void add(RoutePlan part) {
+      for (int lane = 0; lane < 3; lane++) {
+        for (final token in part.lanes[lane].split(' ').where((v) => v.isNotEmpty)) {
+          lanes[order[lane]].add(Bus(id++, colors[token.codeUnitAt(0) - 97], capacity: int.parse(token.substring(1))));
+        }
+      }
+      for (final token in part.queue.split(' ')) {
+        passengers.addAll(List.filled(int.parse(token.substring(1)), colors[token.codeUnitAt(0) - 97]));
+      }
+    }
+    add(plan);
+    if (extension != null) add(extension);
+    final draft = Level(number: number, seed: actualSeed, lanes: lanes, passengers: passengers, generatorVersion: version);
+    final analysis = GameEngine.analyze(draft);
     final level = Level(
       number: number,
       seed: actualSeed,
       lanes: lanes,
       passengers: passengers,
-      solution: solution,
+      solution: analysis.route,
+      generatorVersion: version,
+      title: number <= 30 ? plan.title : '${plan.title} ${number - 30}',
+      lesson: plan.lesson,
+      parkingTarget: analysis.parkingCost,
+      hard: plan.hard || extension?.hard == true,
     );
-    // Construction alone is not considered proof: execute the witness.
     var board = Board.initial(level);
-    for (final lane in solution) {
-      final result = GameEngine.release(level, board, lane);
-      if (!result.accepted) {
-        throw StateError('Generator produced a blocked witness');
-      }
-      board = result.board;
+    for (final lane in level.solution) {
+      final move = GameEngine.release(level, board, lane);
+      if (!move.accepted) throw StateError('Blocked generator witness');
+      board = move.board;
       board.validate(level);
     }
-    if (board.phase(level) != GamePhase.won) {
-      throw StateError('Invalid generator witness');
-    }
+    if (board.phase(level) != GamePhase.won) throw StateError('Invalid generator witness');
+    if (_cache.length >= 32) _cache.remove(_cache.keys.first);
+    _cache[key] = level;
     return level;
   }
 
   Level daily(DateTime date) {
-    final key = date.year * 10000 + date.month * 100 + date.day;
-    return generate(30, seed: key);
+    final utc = date.toUtc();
+    return generate(30, seed: utc.year * 10000 + utc.month * 100 + utc.day);
   }
 }

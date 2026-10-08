@@ -98,6 +98,7 @@ void paintBus(
   Bus bus, {
   double opacity = 1,
   bool highlighted = false,
+  String skin = 'classic',
 }) {
   c.save();
   if (opacity < 1) {
@@ -120,27 +121,42 @@ void paintBus(
     rect,
     'bus-${UrbanAssets.colors[bus.color.index]}',
   );
+  final trim = skin == 'royal' ? const Color(0xFFFFD66D) : skin == 'neon' ? const Color(0xFF91FFF1) : const Color(0xFFF6F3DC);
+  if (skin != 'classic') {
+    final stripeY = rect.top + rect.height * .67;
+    c.drawLine(Offset(rect.left + rect.width * .17, stripeY), Offset(rect.right - rect.width * .17, stripeY), Paint()..color = trim..strokeWidth = skin == 'retro' ? 4 : 2.5);
+    if (skin == 'retro') c.drawLine(Offset(rect.left + rect.width * .17, stripeY + 7), Offset(rect.right - rect.width * .17, stripeY + 7), Paint()..color = trim..strokeWidth = 3);
+    if (skin == 'neon' || skin == 'royal') {
+      c.drawRRect(RRect.fromRectAndRadius(rect.deflate(rect.width * .11), const Radius.circular(9)), Paint()..color = trim.withValues(alpha: .8)..style = PaintingStyle.stroke..strokeWidth = 2);
+    }
+    if (skin == 'metro') {
+      rr(c, Rect.fromLTWH(rect.left + rect.width * .12, rect.top + rect.height * .32, rect.width * .07, rect.height * .25), trim, 3);
+      rr(c, Rect.fromLTWH(rect.right - rect.width * .19, rect.top + rect.height * .32, rect.width * .07, rect.height * .25), trim, 3);
+    }
+  }
+  // Route colour and symbol are fixed by the puzzle, including on paid skins.
+  c.drawCircle(Offset(rect.center.dx, rect.top + 17), 8, Paint()..color = ink);
+  paintMark(c, Offset(rect.center.dx, rect.top + 17), bus.color.index, 10, Colors.white);
   final badge = Rect.fromCenter(
     center: Offset(rect.center.dx, rect.bottom - 10),
-    width: 34,
-    height: 13,
+    width: min(46, rect.width - 6),
+    height: 18,
   );
   rr(c, badge, const Color(0xFF18222F), 4);
-  for (int i = 0; i < bus.capacity; i++) {
-    c.drawCircle(
-      Offset(
-        badge.center.dx + (i - (bus.capacity - 1) / 2) * 9,
-        badge.center.dy,
-      ),
-      2.7,
-      Paint()
-        ..color = i < bus.boarded
-            ? busColors[bus.color.index]
-            : const Color(0xFF77818C),
-    );
-  }
+  label(c, '${bus.boarded}/${bus.capacity}', badge.center, size: 11, color: Colors.white);
   if (opacity < 1) c.restore();
   c.restore();
+}
+
+class TerminalPalette {
+  const TerminalPalette(this.floor, this.road, this.line);
+  final Color floor, road, line;
+  static TerminalPalette forId(String id) => switch (id) {
+    'terminal-coast' => const TerminalPalette(Color(0xFFD8ECEE), Color(0xFF42798B), Color(0xFFE3FCFF)),
+    'terminal-garden' => const TerminalPalette(Color(0xFFE1EBDD), Color(0xFF567968), Color(0xFFF3FFE5)),
+    'terminal-night' => const TerminalPalette(Color(0xFF303E59), Color(0xFF23304B), Color(0xFF8ADFCF)),
+    _ => const TerminalPalette(Color(0xFFE1E5E9), Color(0xFF526274), Color(0xFFF4F7FA)),
+  };
 }
 
 void paintPerson(
