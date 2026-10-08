@@ -88,6 +88,9 @@ jobs:
       - name: Compile normal simulator app
         timeout-minutes: 10
         run: python3 -u tool/run_with_timeout.py 540 flutter build ios --simulator --debug --no-pub
+      - name: Native previews for visual inspection
+        if: always()
+        run: python3 tool/print_ios_previews.py
       - name: Bound evidence size
         id: evidence_bound
         if: always()

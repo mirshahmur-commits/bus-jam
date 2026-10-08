@@ -20,11 +20,23 @@ void main() {
       await t.pumpAndSettle();
       GameController controller() =>
           t.widget<BusJamApp>(find.byType(BusJamApp)).controller;
+      Future<void> waitForResult() async {
+        final phase = controller().board.phase(controller().level);
+        if (phase == GamePhase.playing) return;
+        final result = find.byKey(ValueKey(phase == GamePhase.won ? 'win' : 'fail'));
+        // Native pumpAndSettle can finish between motion and the result timer.
+        for (int frame = 0; frame < 40 && result.evaluate().isEmpty; frame++) {
+          await t.pump(const Duration(milliseconds: 50));
+        }
+        expect(result, findsOneWidget);
+      }
+
       Future<void> tap(String key) async {
         final f = find.byKey(ValueKey(key));
         await t.ensureVisible(f);
         await t.tap(f);
         await t.pumpAndSettle();
+        if (key.startsWith('lane-')) await waitForResult();
       }
 
       Future<void> shot(String name) async {
@@ -47,6 +59,7 @@ void main() {
       }
       expect(c.board.phase(c.level), GamePhase.won);
       await t.pumpAndSettle();
+      await waitForResult();
       expect(find.byKey(const ValueKey('win')), findsOneWidget);
       expect(c.coins, 175);
       await shot('native-win');
