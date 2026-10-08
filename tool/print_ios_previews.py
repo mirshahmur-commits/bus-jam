@@ -21,9 +21,13 @@ previews = root / "ios-previews"
 previews.mkdir(parents=True, exist_ok=True)
 encoded_size = 0
 for screen in screens:
-    preview = previews / screen.name
+    preview = previews / (screen.stem + '.jpg')
     subprocess.run(
-        ["sips", "--resampleWidth", "480", str(screen), "--out", str(preview)],
+        [
+            "sips", "--setProperty", "format", "jpeg",
+            "--setProperty", "formatOptions", "80",
+            "--resampleWidth", "480", str(screen), "--out", str(preview),
+        ],
         check=True,
         stdout=subprocess.DEVNULL,
         timeout=30,
@@ -32,4 +36,4 @@ for screen in screens:
     encoded_size += len(data)
     if encoded_size > 2 * 1024 * 1024:
         raise SystemExit("Native preview log exceeds 2 MiB")
-    print("IOS_PREVIEW " + json.dumps({"name": screen.name, "base64": data}))
+    print("IOS_PREVIEW " + json.dumps({"name": preview.name, "mime": "image/jpeg", "base64": data}))

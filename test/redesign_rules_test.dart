@@ -324,6 +324,28 @@ void main() {
   );
 
   test(
+    'An in-progress legacy daily remains playable but cannot enter the new competition',
+    () async {
+      final rankings = FakeRankings();
+      final c = GameController(
+        store: MemoryProgressStore(),
+        clock: () => DateTime.utc(2026, 10, 8),
+        leaderboards: rankings,
+      );
+      await c.load();
+      c.openDaily();
+      c.level = LegacyLevelGenerator().generate(30, seed: 20261008);
+      c.restart();
+      finish(c);
+      await Future<void>.delayed(Duration.zero);
+      expect(c.board.phase(c.level), GamePhase.won);
+      expect(c.lastResult!.ranked, false);
+      expect(c.rankedDailyScores, isEmpty);
+      expect(rankings.submitted, isEmpty);
+    },
+  );
+
+  test(
     'Stale gesture identity cannot release a different bus after a rapid move',
     () async {
       final c = GameController(store: MemoryProgressStore());

@@ -380,7 +380,11 @@ class GameController extends ChangeNotifier {
         target: level.parkingTarget,
         reward: reward,
         personalBest: improved,
-        ranked: !usedHint && undosUsed == 0 && !board.continued,
+        ranked:
+            level.generatorVersion == LevelGenerator.version &&
+            !usedHint &&
+            undosUsed == 0 &&
+            !board.continued,
       );
       if (dailyMode &&
           lastResult!.ranked &&

@@ -42,6 +42,9 @@ void main() {
       }
 
       Future<void> shot(String name) async {
+        // Let the native raster surface display the frame already in the tree.
+        await t.pump(const Duration(milliseconds: 200));
+        await t.pumpAndSettle();
         await binding.takeScreenshot(name);
       }
 
@@ -115,6 +118,10 @@ void main() {
       await tap('cosmetic-metro');
       expect(collector.coins, 0);
       expect(collector.selectedBus, 'metro');
+      await Scrollable.ensureVisible(
+        t.element(find.text('Metro Line')),
+        alignment: .35,
+      );
       await shot('native-garage');
       await collector.save();
       await app.main();
