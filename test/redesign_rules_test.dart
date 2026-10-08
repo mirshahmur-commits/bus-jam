@@ -243,6 +243,7 @@ void main() {
       old.restart();
       old.release(old.level.solution.first);
       old.coins = 777;
+      await old.save();
       final json = jsonDecode(old.snapshot()) as Map<String, dynamic>;
       json['schema'] = 1;
       json.remove('records');
@@ -251,6 +252,10 @@ void main() {
       json.remove('selectedBus');
       json.remove('selectedTerminal');
       (json['session'] as Map).remove('run');
+      final legacyLevel = (json['session'] as Map)['level'] as Map;
+      for (final key in ['title', 'lesson', 'parkingTarget', 'hard']) {
+        legacyLevel.remove(key);
+      }
       final expected = jsonEncode(old.board.toJson());
       await store.write(jsonEncode(json));
       final upgraded = GameController(store: store);

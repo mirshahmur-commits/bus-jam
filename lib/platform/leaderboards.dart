@@ -34,7 +34,8 @@ class GameCenterLeaderboards implements LeaderboardsPort {
   @override
   Future<bool> open(DailyScore? score) => _call('show', score);
   Future<bool> _call(String method, DailyScore? score) async {
-    if (!enabled || (score != null && (score.score < 0 || score.score > 2000))) {
+    if (!enabled ||
+        (score != null && (score.score < 0 || score.score > 2000))) {
       return false;
     }
     try {
