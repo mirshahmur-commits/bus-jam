@@ -333,6 +333,24 @@ class BoardPainter extends CustomPainter {
           ? palette.line
           : ink,
     );
+    // Show a tactical warning only when the next passenger cannot board yet.
+    // The warning is informational: it never changes the puzzle rules.
+    if (board.cursor < level.passengers.length) {
+      final nextColor = level.passengers[board.cursor];
+      final waitingBus = board.parked.any((bus) => bus.color == nextColor);
+      final exposedBus = board.lanes.any(
+        (lane) => lane.isNotEmpty && lane.first.color == nextColor,
+      );
+      if (!waitingBus && !exposedBus && board.parked.length >= board.slots - 1) {
+        label(
+          c,
+          'CAREFUL! NEXT COLOR IS BLOCKED',
+          Offset(size.width / 2, layout.depotY - 42),
+          size: 10,
+          color: const Color(0xFFCF4438),
+        );
+      }
+    }
     label(
       c,
       'CHOOSE A BUS',
