@@ -203,6 +203,27 @@ void paintBus(
     size: 11,
     color: Colors.white,
   );
+  // A compact occupancy meter makes partial boarding obvious at a glance.
+  final meter = Rect.fromLTWH(
+    rect.left + rect.width * .17,
+    rect.bottom - 25,
+    rect.width * .66,
+    3,
+  );
+  rr(c, meter, ink.withValues(alpha: .45), 2);
+  if (bus.boarded > 0) {
+    rr(
+      c,
+      Rect.fromLTWH(
+        meter.left,
+        meter.top,
+        meter.width * bus.boarded / bus.capacity,
+        meter.height,
+      ),
+      const Color(0xFFB5FFBD),
+      2,
+    );
+  }
   if (opacity < 1) c.restore();
   c.restore();
 }
