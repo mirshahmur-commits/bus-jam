@@ -7,8 +7,6 @@ workflows:
     integrations:
       app_store_connect: MiniPoliglotKey
     environment:
-      groups:
-        - bus_jam_build
       flutter: 3.47.6
       xcode: latest
       cocoapods: default
