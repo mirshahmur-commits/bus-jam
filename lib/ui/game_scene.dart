@@ -324,6 +324,8 @@ class BoardPainter extends CustomPainter {
       size: 10,
       color: terminal == 'terminal-night' ? palette.line : ink,
     );
+    label(c, 'CHOOSE A BUS', Offset(size.width / 2, layout.depotY - 22),
+        size: 12, color: ink);
     for (int lane = 0; lane < board.lanes.length; lane++) {
       final top = layout.depot(lane, 0);
       final bottom = layout.depot(lane, max(0, board.lanes[lane].length - 1));
@@ -370,6 +372,8 @@ class BoardPainter extends CustomPainter {
     // Passenger queue is visually separated from the bus depot, matching
     // the top-to-bottom parking-jam reading order.
     final queueTop = layout.queueY;
+    label(c, 'PASSENGER QUEUE', Offset(size.width / 2, queueTop - 11),
+        size: 10, color: ink);
     rr(c, Rect.fromLTWH(9, queueTop, size.width - 18, 66),
         Colors.white.withValues(alpha: .92), 18);
     label(c, '${level.passengers.length - board.cursor} WAITING',
