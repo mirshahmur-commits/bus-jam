@@ -372,6 +372,8 @@ class BoardPainter extends CustomPainter {
     final queueTop = layout.queueY;
     rr(c, Rect.fromLTWH(9, queueTop, size.width - 18, 66),
         Colors.white.withValues(alpha: .92), 18);
+    label(c, '${level.passengers.length - board.cursor} WAITING',
+        Offset(size.width - 72, queueTop + 55), size: 9, color: ink);
     for (int i = 0; i < min(9, level.passengers.length - board.cursor); i++) {
       paintPerson(c, layout.person(i), level.passengers[board.cursor + i],
           scale: i == 0 ? .85 : .67);
