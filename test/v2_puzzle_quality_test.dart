@@ -31,6 +31,17 @@ void main() {
     }
   });
 
+  test('procedural difficulty alternates pressure and recovery rounds', () {
+    for (var number = 31; number <= 50; number++) {
+      final level = generator.generate(number);
+      if (number % 5 == 0) {
+        expect(level.hard, isFalse, reason: 'recovery route $number');
+      } else {
+        expect(level.hard, isTrue, reason: 'pressure route $number');
+      }
+    }
+  });
+
   test('procedural puzzles preserve solvability and deterministic seeds', () {
     for (final number in <int>[31, 32, 35, 40, 45, 50]) {
       final level = generator.generate(number);
