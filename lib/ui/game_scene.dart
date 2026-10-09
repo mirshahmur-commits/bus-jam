@@ -11,10 +11,10 @@ class SceneLayout {
   SceneLayout(this.size, this.lanes, this.slots);
   final Size size;
   final int lanes, slots;
-  double get busW => min(72, (size.width - 40) / max(lanes, slots) - 14);
+  double get busW => min(86, (size.width - 28) / max(lanes, slots) - 10);
   double get busH => busW * 1.48;
-  double get parkY => 94;
-  double get depotY => parkY + busH + 65;
+  double get parkY => 20;
+  double get depotY => parkY + busH + 66;
   Rect slot(int i) => Rect.fromLTWH(
     20 + (size.width - 40) / slots * (i + .5) - busW / 2,
     parkY,
@@ -27,7 +27,8 @@ class SceneLayout {
     busW,
     busH,
   );
-  Offset person(int i) => Offset(31 + i * (size.width - 62) / 8, 42);
+  Offset person(int i) => Offset(31 + i * (size.width - 62) / 8, queueY + 26);
+  double get queueY => depotY + 4 * 35 + busH + 24;
   Map<int, Rect> positions(Board board) => {
     for (int i = 0; i < board.parked.length; i++) board.parked[i].id: slot(i),
     for (int lane = 0; lane < board.lanes.length; lane++)
@@ -37,7 +38,7 @@ class SceneLayout {
   static double heightFor(double width, Level level) {
     final layout = SceneLayout(Size(width, 0), level.lanes.length, level.slots);
     final depth = level.lanes.map((l) => l.length).fold(1, max);
-    return layout.depotY + (depth - 1) * 35 + layout.busH + 25;
+    return layout.depotY + max(depth - 1, 4) * 35 + layout.busH + 110;
   }
 }
 
@@ -291,23 +292,6 @@ class BoardPainter extends CustomPainter {
     rr(c, Offset.zero & size, palette.floor, 24);
     rr(
       c,
-      Rect.fromLTWH(9, 8, size.width - 18, 65),
-      Colors.white.withValues(alpha: .9),
-      18,
-    );
-    for (int i = 0; i < min(9, level.passengers.length - board.cursor); i++) {
-      paintPerson(
-        c,
-        layout.person(i),
-        level.passengers[board.cursor + i],
-        scale: i == 0 ? .78 : .64,
-      );
-    }
-    if (board.cursor < level.passengers.length) {
-      label(c, 'NEXT', const Offset(31, 64), size: 8, color: teal);
-    }
-    rr(
-      c,
       Rect.fromLTWH(0, layout.parkY - 12, size.width, layout.busH + 28),
       palette.road,
       0,
@@ -380,6 +364,18 @@ class BoardPainter extends CustomPainter {
     }
     for (final departure in departures) {
       paintBus(c, departure.at(now, size.width), departure.bus, skin: skin);
+    }
+    // Passenger queue is visually separated from the bus depot, matching
+    // the top-to-bottom parking-jam reading order.
+    final queueTop = layout.queueY;
+    rr(c, Rect.fromLTWH(9, queueTop, size.width - 18, 66),
+        Colors.white.withValues(alpha: .92), 18);
+    for (int i = 0; i < min(9, level.passengers.length - board.cursor); i++) {
+      paintPerson(c, layout.person(i), level.passengers[board.cursor + i],
+          scale: i == 0 ? .85 : .67);
+    }
+    if (board.cursor < level.passengers.length) {
+      label(c, 'NEXT', Offset(31, queueTop + 57), size: 8, color: teal);
     }
     for (final flight in flights) {
       final p = flight.progress(now);
