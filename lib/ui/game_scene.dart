@@ -333,8 +333,7 @@ class BoardPainter extends CustomPainter {
           ? palette.line
           : ink,
     );
-    // Show a tactical warning only when the next passenger cannot board yet.
-    // The warning is informational: it never changes the puzzle rules.
+    // Signal danger without solving the puzzle for the player.
     if (board.cursor < level.passengers.length) {
       final nextColor = level.passengers[board.cursor];
       final waitingBus = board.parked.any((bus) => bus.color == nextColor);
