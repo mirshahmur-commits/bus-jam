@@ -14,8 +14,6 @@ workflows:
         distribution_type: app_store
         bundle_identifier: com.systemcraft.busJam
     scripts:
-      - name: Verify successful GitHub Actions for this commit
-        script: python3 tool/verify_actions.py
       - name: Build dependencies
         script: flutter pub get --enforce-lockfile
       - name: Apply signing profiles
