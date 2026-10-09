@@ -33,17 +33,9 @@ class LevelGenerator {
       final indices = easy
           ? [5, 9, 14, 19, 24]
           : [3, 7, 10, 12, 17, 21, 23, 26, 28, 29];
-      // Sample several proven templates and favour real decision pressure.
-      // The solver measures choices that can lead to a dead end.
-      var bestIndex = indices[rng.nextInt(indices.length)];
-      if (!easy) {
-        // Choose from hard templates, but keep seeded variety instead of
-        // repeatedly selecting the same final template.
-        final hardIndices = indices.where((i) => campaign[i].hard).toList();
-        if (hardIndices.isNotEmpty) {
-          bestIndex = hardIndices[rng.nextInt(hardIndices.length)];
-        }
-      }
+      // Seeded selection keeps pressure rounds varied and replayable.
+      // All pressure templates are marked hard in the authored campaign.
+      final bestIndex = indices[rng.nextInt(indices.length)];
       plan = campaign[bestIndex];
       colors.shuffle(rng);
       order.shuffle(rng);
