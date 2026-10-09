@@ -303,6 +303,15 @@ class BoardPainter extends CustomPainter {
       palette.road,
       0,
     );
+    // Repeating lane markers make the parking apron read like a real road.
+    for (double x = 18; x < size.width; x += 38) {
+      rr(
+        c,
+        Rect.fromLTWH(x, layout.parkY + layout.busH + 6, 20, 3),
+        palette.line.withValues(alpha: .55),
+        2,
+      );
+    }
     for (int slot = 0; slot < board.slots; slot++) {
       final rect = layout.slot(slot).inflate(4);
       c.drawRRect(
