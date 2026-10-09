@@ -12,7 +12,7 @@ class SceneLayout {
   final Size size;
   final int lanes, slots;
   final int maxDepth;
-  double get busW => min(86, (size.width - 28) / max(lanes, slots) - 10);
+  double get busW => max(32, min(86, (size.width - 28) / max(lanes, slots) - 10));
   double get busH => busW * 1.48;
   double get parkY => 20;
   double get depotY => parkY + busH + 66;
