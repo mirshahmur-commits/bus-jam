@@ -42,6 +42,26 @@ void main() {
     }
   });
 
+  test('hard rounds contain measurable strategic decisions', () {
+    var decisions = 0;
+    var losingChoices = 0;
+    var sampled = 0;
+    for (var number = 31; number <= 42; number++) {
+      if (number % 5 == 0) continue;
+      final level = generator.generate(number);
+      final analysis = GameEngine.analyze(level);
+      decisions += analysis.decisions;
+      losingChoices += analysis.losingChoices;
+      sampled++;
+      expect(analysis.route, level.solution, reason: 'level $number');
+    }
+    // Guard against accidentally reducing the hard pool to trivial
+    // one-choice puzzles. These are solver measurements, not visual labels.
+    expect(sampled, greaterThan(0));
+    expect(decisions, greaterThan(0));
+    expect(losingChoices, greaterThan(0));
+  });
+
   test('procedural puzzles preserve solvability and deterministic seeds', () {
     for (final number in <int>[31, 32, 35, 40, 45, 50]) {
       final level = generator.generate(number);
