@@ -8,9 +8,10 @@ import '../game/model.dart';
 import 'art.dart';
 
 class SceneLayout {
-  SceneLayout(this.size, this.lanes, this.slots);
+  SceneLayout(this.size, this.lanes, this.slots, {this.maxDepth = 5});
   final Size size;
   final int lanes, slots;
+  final int maxDepth;
   double get busW => min(86, (size.width - 28) / max(lanes, slots) - 10);
   double get busH => busW * 1.48;
   double get parkY => 20;
@@ -28,7 +29,7 @@ class SceneLayout {
     busH,
   );
   Offset person(int i) => Offset(31 + i * (size.width - 62) / 8, queueY + 26);
-  double get queueY => depotY + 4 * 35 + busH + 24;
+  double get queueY => depotY + max(4, maxDepth - 1) * 35 + busH + 24;
   Map<int, Rect> positions(Board board) => {
     for (int i = 0; i < board.parked.length; i++) board.parked[i].id: slot(i),
     for (int lane = 0; lane < board.lanes.length; lane++)
@@ -36,9 +37,10 @@ class SceneLayout {
         board.lanes[lane][depth].id: depot(lane, depth),
   };
   static double heightFor(double width, Level level) {
-    final layout = SceneLayout(Size(width, 0), level.lanes.length, level.slots);
+    final layout = SceneLayout(Size(width, 0), level.lanes.length, level.slots,
+        maxDepth: level.lanes.map((lane) => lane.length).fold(1, max));
     final depth = level.lanes.map((l) => l.length).fold(1, max);
-    return layout.depotY + max(depth - 1, 4) * 35 + layout.busH + 110;
+    return layout.queueY + 86;
   }
 }
 
@@ -201,6 +203,7 @@ class _GameSceneState extends State<GameScene>
         Size(constraints.maxWidth, constraints.maxHeight),
         c.board.lanes.length,
         c.board.slots,
+        maxDepth: c.board.lanes.map((lane) => lane.length).fold(1, max),
       );
       layout = scene;
       final positions = scene
