@@ -322,7 +322,9 @@ class BoardPainter extends CustomPainter {
       '${board.slots - board.parked.length} FREE ${board.slots - board.parked.length == 1 ? 'SPACE' : 'SPACES'}',
       Offset(size.width / 2, layout.parkY + layout.busH + 34),
       size: 10,
-      color: terminal == 'terminal-night' ? palette.line : ink,
+      color: board.parked.length >= board.slots - 1
+          ? const Color(0xFFCF4438)
+          : terminal == 'terminal-night' ? palette.line : ink,
     );
     label(c, 'CHOOSE A BUS', Offset(size.width / 2, layout.depotY - 22),
         size: 12, color: ink);
