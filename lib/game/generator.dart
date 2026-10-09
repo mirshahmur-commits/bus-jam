@@ -37,14 +37,11 @@ class LevelGenerator {
       // The solver measures choices that can lead to a dead end.
       var bestIndex = indices[rng.nextInt(indices.length)];
       if (!easy) {
-        var bestScore = -1;
-        for (final index in indices) {
-          final candidate = campaign[index];
-          final score = candidate.hard ? 2 : 0;
-          if (score > bestScore || (score == bestScore && rng.nextBool())) {
-            bestScore = score;
-            bestIndex = index;
-          }
+        // Choose from hard templates, but keep seeded variety instead of
+        // repeatedly selecting the same final template.
+        final hardIndices = indices.where((i) => campaign[i].hard).toList();
+        if (hardIndices.isNotEmpty) {
+          bestIndex = hardIndices[rng.nextInt(hardIndices.length)];
         }
       }
       plan = campaign[bestIndex];
