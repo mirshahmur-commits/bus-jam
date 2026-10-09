@@ -402,6 +402,29 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
             letterSpacing: -.8,
           ),
         ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            Chip(
+              avatar: const Icon(Icons.local_parking_rounded, size: 16),
+              label: Text('${c.level.slots} parking slots'),
+              visualDensity: VisualDensity.compact,
+            ),
+            Chip(
+              avatar: const Icon(Icons.directions_bus_rounded, size: 16),
+              label: Text('${c.level.busCount} buses'),
+              visualDensity: VisualDensity.compact,
+            ),
+            if (c.level.hard)
+              const Chip(
+                avatar: Icon(Icons.local_fire_department_rounded, size: 16),
+                label: Text('Hard route'),
+                visualDensity: VisualDensity.compact,
+              ),
+          ],
+        ),
         const SizedBox(height: 16),
         primary(
           'Continue · Route ${c.board.phase(c.level) == GamePhase.won ? c.unlocked : c.level.number}',

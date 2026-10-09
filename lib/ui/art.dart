@@ -116,10 +116,39 @@ void paintBus(
         ..strokeWidth = 3,
     );
   }
+  // Soft contact shadow anchors the bus to the road.
+  c.drawRRect(
+    RRect.fromRectAndRadius(
+      rect.shift(const Offset(1.5, 3)).deflate(1),
+      const Radius.circular(12),
+    ),
+    Paint()
+      ..color = const Color(0xFF162132).withValues(alpha: .22)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
+  );
   UrbanAssets.instance.paint(
     c,
     rect,
     'bus-${UrbanAssets.colors[bus.color.index]}',
+  );
+  // Gloss and a slim side highlight add depth without hiding the route art.
+  final shine = Rect.fromLTWH(
+    rect.left + rect.width * .14,
+    rect.top + rect.height * .11,
+    rect.width * .08,
+    rect.height * .43,
+  );
+  c.drawRRect(
+    RRect.fromRectAndRadius(shine, const Radius.circular(8)),
+    Paint()..color = Colors.white.withValues(alpha: .32),
+  );
+  c.drawLine(
+    Offset(rect.right - rect.width * .12, rect.top + rect.height * .2),
+    Offset(rect.right - rect.width * .12, rect.bottom - rect.height * .28),
+    Paint()
+      ..color = Colors.black.withValues(alpha: .12)
+      ..strokeWidth = 2.5
+      ..strokeCap = StrokeCap.round,
   );
   final trim = skin == 'royal'
       ? const Color(0xFFFFD66D)
@@ -203,6 +232,27 @@ void paintBus(
     size: 11,
     color: Colors.white,
   );
+  // A compact occupancy meter makes partial boarding obvious at a glance.
+  final meter = Rect.fromLTWH(
+    rect.left + rect.width * .17,
+    rect.bottom - 25,
+    rect.width * .66,
+    3,
+  );
+  rr(c, meter, ink.withValues(alpha: .45), 2);
+  if (bus.boarded > 0) {
+    rr(
+      c,
+      Rect.fromLTWH(
+        meter.left,
+        meter.top,
+        meter.width * bus.boarded / bus.capacity,
+        meter.height,
+      ),
+      const Color(0xFFB5FFBD),
+      2,
+    );
+  }
   if (opacity < 1) c.restore();
   c.restore();
 }

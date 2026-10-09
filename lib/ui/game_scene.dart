@@ -8,13 +8,15 @@ import '../game/model.dart';
 import 'art.dart';
 
 class SceneLayout {
-  SceneLayout(this.size, this.lanes, this.slots);
+  SceneLayout(this.size, this.lanes, this.slots, {this.maxDepth = 5});
   final Size size;
   final int lanes, slots;
-  double get busW => min(72, (size.width - 40) / max(lanes, slots) - 14);
+  final int maxDepth;
+  double get busW =>
+      max(32, min(86, (size.width - 28) / max(lanes, slots) - 10));
   double get busH => busW * 1.48;
-  double get parkY => 94;
-  double get depotY => parkY + busH + 65;
+  double get parkY => 20;
+  double get depotY => parkY + busH + 66;
   Rect slot(int i) => Rect.fromLTWH(
     20 + (size.width - 40) / slots * (i + .5) - busW / 2,
     parkY,
@@ -27,7 +29,8 @@ class SceneLayout {
     busW,
     busH,
   );
-  Offset person(int i) => Offset(31 + i * (size.width - 62) / 8, 42);
+  Offset person(int i) => Offset(31 + i * (size.width - 62) / 8, queueY + 26);
+  double get queueY => depotY + max(4, maxDepth - 1) * 35 + busH + 24;
   Map<int, Rect> positions(Board board) => {
     for (int i = 0; i < board.parked.length; i++) board.parked[i].id: slot(i),
     for (int lane = 0; lane < board.lanes.length; lane++)
@@ -35,9 +38,13 @@ class SceneLayout {
         board.lanes[lane][depth].id: depot(lane, depth),
   };
   static double heightFor(double width, Level level) {
-    final layout = SceneLayout(Size(width, 0), level.lanes.length, level.slots);
-    final depth = level.lanes.map((l) => l.length).fold(1, max);
-    return layout.depotY + (depth - 1) * 35 + layout.busH + 25;
+    final layout = SceneLayout(
+      Size(width, 0),
+      level.lanes.length,
+      level.slots,
+      maxDepth: level.lanes.map((lane) => lane.length).fold(1, max),
+    );
+    return layout.queueY + 86;
   }
 }
 
@@ -200,6 +207,7 @@ class _GameSceneState extends State<GameScene>
         Size(constraints.maxWidth, constraints.maxHeight),
         c.board.lanes.length,
         c.board.slots,
+        maxDepth: c.board.lanes.map((lane) => lane.length).fold(1, max),
       );
       layout = scene;
       final positions = scene
@@ -291,27 +299,19 @@ class BoardPainter extends CustomPainter {
     rr(c, Offset.zero & size, palette.floor, 24);
     rr(
       c,
-      Rect.fromLTWH(9, 8, size.width - 18, 65),
-      Colors.white.withValues(alpha: .9),
-      18,
-    );
-    for (int i = 0; i < min(9, level.passengers.length - board.cursor); i++) {
-      paintPerson(
-        c,
-        layout.person(i),
-        level.passengers[board.cursor + i],
-        scale: i == 0 ? .78 : .64,
-      );
-    }
-    if (board.cursor < level.passengers.length) {
-      label(c, 'NEXT', const Offset(31, 64), size: 8, color: teal);
-    }
-    rr(
-      c,
       Rect.fromLTWH(0, layout.parkY - 12, size.width, layout.busH + 28),
       palette.road,
       0,
     );
+    // Repeating lane markers make the parking apron read like a real road.
+    for (double x = 18; x < size.width; x += 38) {
+      rr(
+        c,
+        Rect.fromLTWH(x, layout.parkY + layout.busH + 6, 20, 3),
+        palette.line.withValues(alpha: .55),
+        2,
+      );
+    }
     for (int slot = 0; slot < board.slots; slot++) {
       final rect = layout.slot(slot).inflate(4);
       c.drawRRect(
@@ -336,7 +336,37 @@ class BoardPainter extends CustomPainter {
       '${board.slots - board.parked.length} FREE ${board.slots - board.parked.length == 1 ? 'SPACE' : 'SPACES'}',
       Offset(size.width / 2, layout.parkY + layout.busH + 34),
       size: 10,
-      color: terminal == 'terminal-night' ? palette.line : ink,
+      color: board.parked.length >= board.slots - 1
+          ? const Color(0xFFCF4438)
+          : terminal == 'terminal-night'
+          ? palette.line
+          : ink,
+    );
+    // Signal danger without solving the puzzle for the player.
+    if (board.cursor < level.passengers.length) {
+      final nextColor = level.passengers[board.cursor];
+      final waitingBus = board.parked.any((bus) => bus.color == nextColor);
+      final exposedBus = board.lanes.any(
+        (lane) => lane.isNotEmpty && lane.first.color == nextColor,
+      );
+      if (!waitingBus &&
+          !exposedBus &&
+          board.parked.length >= board.slots - 1) {
+        label(
+          c,
+          'CAREFUL! NEXT COLOR IS BLOCKED',
+          Offset(size.width / 2, layout.depotY - 42),
+          size: 10,
+          color: const Color(0xFFCF4438),
+        );
+      }
+    }
+    label(
+      c,
+      'CHOOSE A BUS',
+      Offset(size.width / 2, layout.depotY - 22),
+      size: 12,
+      color: ink,
     );
     for (int lane = 0; lane < board.lanes.length; lane++) {
       final top = layout.depot(lane, 0);
@@ -380,6 +410,59 @@ class BoardPainter extends CustomPainter {
     }
     for (final departure in departures) {
       paintBus(c, departure.at(now, size.width), departure.bus, skin: skin);
+    }
+    // A visible completion meter gives each successful boarding a payoff.
+    final totalPassengers = level.passengers.length;
+    if (totalPassengers > 0) {
+      final track = Rect.fromLTWH(20, layout.queueY - 29, size.width - 40, 5);
+      rr(c, track, ink.withValues(alpha: .12), 3);
+      if (board.cursor > 0) {
+        rr(
+          c,
+          Rect.fromLTWH(
+            track.left,
+            track.top,
+            track.width * board.cursor / totalPassengers,
+            track.height,
+          ),
+          const Color(0xFF2CBF95),
+          3,
+        );
+      }
+    }
+    // Passenger queue is visually separated from the bus depot, matching
+    // the top-to-bottom parking-jam reading order.
+    final queueTop = layout.queueY;
+    label(
+      c,
+      'PASSENGER QUEUE',
+      Offset(size.width / 2, queueTop - 11),
+      size: 10,
+      color: ink,
+    );
+    rr(
+      c,
+      Rect.fromLTWH(9, queueTop, size.width - 18, 66),
+      Colors.white.withValues(alpha: .92),
+      18,
+    );
+    label(
+      c,
+      '${level.passengers.length - board.cursor} WAITING',
+      Offset(size.width - 72, queueTop + 55),
+      size: 9,
+      color: ink,
+    );
+    for (int i = 0; i < min(9, level.passengers.length - board.cursor); i++) {
+      paintPerson(
+        c,
+        layout.person(i),
+        level.passengers[board.cursor + i],
+        scale: i == 0 ? .85 : .67,
+      );
+    }
+    if (board.cursor < level.passengers.length) {
+      label(c, 'NEXT', Offset(31, queueTop + 57), size: 8, color: teal);
     }
     for (final flight in flights) {
       final p = flight.progress(now);

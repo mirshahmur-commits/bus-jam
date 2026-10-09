@@ -27,13 +27,24 @@ class LevelGenerator {
       }
     } else {
       final easy = number % 5 == 0;
+      // Keep every fifth level as a short recovery round. Other
+      // procedural levels reuse the campaign's proven pressure puzzles.
+      // Their colour/lane permutations keep them replayable and solvable.
       final indices = easy
           ? [5, 9, 14, 19, 24]
-          : [3, 7, 10, 12, 15, 16, 17, 20, 21, 22, 23, 25, 26, 27, 28, 29];
-      plan = campaign[indices[rng.nextInt(indices.length)]];
+          : [3, 7, 10, 12, 17, 21, 23, 26, 28, 29];
+      // Seeded selection keeps pressure rounds varied and replayable.
+      // All pressure templates are marked hard in the authored campaign.
+      final bestIndex = indices[rng.nextInt(indices.length)];
+      plan = campaign[bestIndex];
       colors.shuffle(rng);
       order.shuffle(rng);
-      if (!easy && number.isEven) extension = campaign[6 + rng.nextInt(9)];
+      if (!easy && number.isEven) {
+        // An additional connected depot creates longer planning chains.
+        // The exact solver below validates the combined route.
+        const extensions = [6, 7, 10, 12, 13];
+        extension = campaign[extensions[rng.nextInt(extensions.length)]];
+      }
     }
     final lanes = List.generate(3, (_) => <Bus>[]);
     final passengers = <BusColor>[];
