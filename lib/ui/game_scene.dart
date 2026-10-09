@@ -39,7 +39,6 @@ class SceneLayout {
   static double heightFor(double width, Level level) {
     final layout = SceneLayout(Size(width, 0), level.lanes.length, level.slots,
         maxDepth: level.lanes.map((lane) => lane.length).fold(1, max));
-    final depth = level.lanes.map((l) => l.length).fold(1, max);
     return layout.queueY + 86;
   }
 }
