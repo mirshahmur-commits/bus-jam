@@ -5,6 +5,7 @@ import os
 import re
 import subprocess
 import sys
+from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
@@ -46,11 +47,26 @@ def verified_run(commit, get_json):
 def github_json(path):
     headers = {"Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2026-03-10"}
     token = os.environ.get("GITHUB_READ_TOKEN")
-    if token:
-        headers["Authorization"] = "Bearer " + token
+    if not token:
+        raise GateError(
+            "GITHUB_READ_TOKEN is missing in Codemagic environment group "
+            "bus_jam_build. Create a fine-grained GitHub token with "
+            "Actions: Read access to mirshahmur-commits/bus-jam, "
+            "add it as a secure variable, then rebuild."
+        )
+    headers["Authorization"] = "Bearer " + token
     request = Request("https://api.github.com" + path, headers=headers)
-    with urlopen(request, timeout=20) as response:
-        return json.load(response)
+    try:
+        with urlopen(request, timeout=20) as response:
+            return json.load(response)
+    except HTTPError as error:
+        if error.code in (401, 403):
+            raise GateError(
+                "GitHub API authentication or rate-limit failure (HTTP "
+                + str(error.code)
+                + "). Check GITHUB_READ_TOKEN permissions and expiry."
+            ) from None
+        raise
 
 
 def main():
