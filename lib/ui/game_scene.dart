@@ -349,7 +349,9 @@ class BoardPainter extends CustomPainter {
       final exposedBus = board.lanes.any(
         (lane) => lane.isNotEmpty && lane.first.color == nextColor,
       );
-      if (!waitingBus && !exposedBus && board.parked.length >= board.slots - 1) {
+      if (!waitingBus &&
+          !exposedBus &&
+          board.parked.length >= board.slots - 1) {
         label(
           c,
           'CAREFUL! NEXT COLOR IS BLOCKED',
