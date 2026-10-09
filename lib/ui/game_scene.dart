@@ -411,6 +411,30 @@ class BoardPainter extends CustomPainter {
     for (final departure in departures) {
       paintBus(c, departure.at(now, size.width), departure.bus, skin: skin);
     }
+    // A visible completion meter gives each successful boarding a payoff.
+    final totalPassengers = level.passengers.length;
+    if (totalPassengers > 0) {
+      final track = Rect.fromLTWH(
+        20,
+        layout.queueY - 29,
+        size.width - 40,
+        5,
+      );
+      rr(c, track, ink.withValues(alpha: .12), 3);
+      if (board.cursor > 0) {
+        rr(
+          c,
+          Rect.fromLTWH(
+            track.left,
+            track.top,
+            track.width * board.cursor / totalPassengers,
+            track.height,
+          ),
+          const Color(0xFF2CBF95),
+          3,
+        );
+      }
+    }
     // Passenger queue is visually separated from the bus depot, matching
     // the top-to-bottom parking-jam reading order.
     final queueTop = layout.queueY;
