@@ -414,12 +414,7 @@ class BoardPainter extends CustomPainter {
     // A visible completion meter gives each successful boarding a payoff.
     final totalPassengers = level.passengers.length;
     if (totalPassengers > 0) {
-      final track = Rect.fromLTWH(
-        20,
-        layout.queueY - 29,
-        size.width - 40,
-        5,
-      );
+      final track = Rect.fromLTWH(20, layout.queueY - 29, size.width - 40, 5);
       rr(c, track, ink.withValues(alpha: .12), 3);
       if (board.cursor > 0) {
         rr(
