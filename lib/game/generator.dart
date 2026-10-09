@@ -33,7 +33,21 @@ class LevelGenerator {
       final indices = easy
           ? [5, 9, 14, 19, 24]
           : [3, 7, 10, 12, 17, 21, 23, 26, 28, 29];
-      plan = campaign[indices[rng.nextInt(indices.length)]];
+      // Sample several proven templates and favour real decision pressure.
+      // The solver measures choices that can lead to a dead end.
+      var bestIndex = indices[rng.nextInt(indices.length)];
+      if (!easy) {
+        var bestScore = -1;
+        for (final index in indices) {
+          final candidate = campaign[index];
+          final score = candidate.hard ? 2 : 0;
+          if (score > bestScore || (score == bestScore && rng.nextBool())) {
+            bestScore = score;
+            bestIndex = index;
+          }
+        }
+      }
+      plan = campaign[bestIndex];
       colors.shuffle(rng);
       order.shuffle(rng);
       if (!easy && number.isEven) {
