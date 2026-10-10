@@ -2,8 +2,8 @@
   "status": "Passed",
   "generatorVersion": 3,
   "levels": 10000,
-  "witnessMoves": 397119,
-  "levelsNeedingWaitingSlots": 9869,
+  "witnessMoves": 718746,
+  "levelsNeedingWaitingSlots": 9990,
   "independentSolverLevels": 300,
-  "elapsedMs": 199822
+  "elapsedMs": 749543
 }

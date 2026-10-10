@@ -20,7 +20,7 @@ jobs:
     # requires explicit allowance/billing verification before runs are enabled.
     if: github.event.repository.private == false || vars.ZERO_SPEND_CI_READY == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
