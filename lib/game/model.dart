@@ -21,35 +21,31 @@ class Bus {
   final int boarded;
 }
 
-/// A crowd puzzle. Passengers stand on a [rows] x [cols] grid; row 0 touches
-/// the bus stop. Only a passenger with a clear path to the stop can walk.
-/// Buses arrive one at a time in [buses] order.
+/// A crowd puzzle. Passengers queue in [lanes] that stream up to the stop;
+/// only the front passenger of a lane can walk. Buses arrive one at a time
+/// in [buses] order.
 class Level {
   Level({
     required this.number,
     required this.seed,
-    required this.rows,
-    required this.cols,
-    required List<int> cells,
+    required List<List<int>> lanes,
     required List<BusColor> buses,
     Set<int> hidden = const {},
     this.slots = 5,
     List<int> solution = const [],
     this.generatorVersion = 3,
     this.title = 'City stop',
-    this.lesson = 'Tap a passenger with a clear path to the bus.',
+    this.lesson = 'Tap a lane to send its front passenger.',
     this.parkingTarget = 0,
     this.hard = false,
-  }) : cells = List.unmodifiable(cells),
+  }) : lanes = List.unmodifiable(lanes.map((l) => List<int>.unmodifiable(l))),
        buses = List.unmodifiable(buses),
        hidden = Set.unmodifiable(hidden),
        solution = List.unmodifiable(solution) {
     if (number < 1 ||
-        rows < 1 ||
-        rows > 10 ||
-        cols < 1 ||
-        cols > 8 ||
-        cells.length != rows * cols ||
+        lanes.isEmpty ||
+        lanes.length > 6 ||
+        lanes.any((l) => l.isEmpty || l.length > 40) ||
         slots < 1 ||
         slots > 7 ||
         buses.isEmpty ||
@@ -59,11 +55,11 @@ class Level {
     }
     final demand = List.filled(BusColor.values.length, 0);
     final supply = List.filled(BusColor.values.length, 0);
-    for (final cell in cells) {
-      if (cell < -1 || cell >= BusColor.values.length) {
+    for (final color in lanes.expand((l) => l)) {
+      if (color < 0 || color >= BusColor.values.length) {
         throw const FormatException('Invalid passenger');
       }
-      if (cell >= 0) demand[cell]++;
+      demand[color]++;
     }
     for (final bus in buses) {
       supply[bus.index] += busCapacity;
@@ -73,24 +69,32 @@ class Level {
         'Passenger and seat counts must match by color',
       );
     }
-    if (hidden.any((i) => i < 0 || i >= cells.length || cells[i] < 0)) {
+    if (hidden.any(
+      (k) =>
+          k ~/ 1000 >= lanes.length ||
+          k % 1000 == 0 ||
+          k % 1000 >= lanes[k ~/ 1000].length,
+    )) {
       throw const FormatException('Invalid hidden passenger');
     }
   }
-  final int number, seed, rows, cols, slots, generatorVersion;
+  final int number, seed, slots, generatorVersion;
   final String title, lesson;
   final int parkingTarget;
   final bool hard;
 
-  /// Colour index per cell, or -1 for open pavement.
-  final List<int> cells;
+  /// Colour index per passenger, front of each lane first.
+  final List<List<int>> lanes;
   final List<BusColor> buses;
 
-  /// Passengers whose colour stays secret until they can reach the stop.
+  /// Passengers (`lane * 1000 + depth`) whose colour stays secret until they
+  /// reach the front of their lane. Front passengers are never hidden.
   final Set<int> hidden;
 
-  /// Cell taps of a verified winning route.
+  /// Lane taps of a verified winning route.
   final List<int> solution;
+  static int key(int lane, int depth) => lane * 1000 + depth;
+  bool isHidden(int lane, int depth) => hidden.contains(key(lane, depth));
   int get busCount => buses.length;
   int get passengerCount => buses.length * busCapacity;
   String get district => [
@@ -103,9 +107,7 @@ class Level {
     'number': number,
     'seed': seed,
     'version': generatorVersion,
-    'rows': rows,
-    'cols': cols,
-    'cells': cells,
+    'lanes': lanes,
     'buses': buses.map((c) => c.index).toList(),
     'hidden': hidden.toList()..sort(),
     'slots': slots,
@@ -122,9 +124,7 @@ class Level {
     return Level(
       number: j['number'] as int,
       seed: j['seed'] as int,
-      rows: j['rows'] as int,
-      cols: j['cols'] as int,
-      cells: (j['cells'] as List).cast<int>(),
+      lanes: (j['lanes'] as List).map((l) => (l as List).cast<int>()).toList(),
       buses: (j['buses'] as List)
           .map((c) => BusColor.values[c as int])
           .toList(),
@@ -141,17 +141,17 @@ class Level {
 
 class Board {
   Board({
-    required List<int> people,
+    required List<int> taken,
     required List<BusColor> waiting,
     required this.busIndex,
     required this.boarded,
     required this.moves,
     required this.slots,
     this.continued = false,
-  }) : people = List.unmodifiable(people),
+  }) : taken = List.unmodifiable(taken),
        waiting = List.unmodifiable(waiting);
   factory Board.initial(Level l) => Board(
-    people: l.cells,
+    taken: List.filled(l.lanes.length, 0),
     waiting: const [],
     busIndex: 0,
     boarded: 0,
@@ -159,16 +159,30 @@ class Board {
     slots: l.slots,
   );
 
-  /// Remaining passengers by cell: colour index, or -1 once they have left.
-  final List<int> people;
+  /// Passengers that have already left each lane.
+  final List<int> taken;
 
-  /// Passengers in the waiting area, in arrival order.
+  /// Passengers in the waiting slots, in arrival order.
   final List<BusColor> waiting;
 
   /// Index of the bus at the stop and passengers already seated in it.
   final int busIndex, boarded, moves, slots;
   final bool continued;
-  int get remaining => people.where((p) => p >= 0).length;
+  int remaining(Level l) {
+    var n = 0;
+    for (int i = 0; i < taken.length; i++) {
+      n += l.lanes[i].length - taken[i];
+    }
+    return n;
+  }
+
+  bool open(Level l, int lane) =>
+      lane >= 0 && lane < taken.length && taken[lane] < l.lanes[lane].length;
+
+  /// Colour of the front passenger of [lane], or null for an empty lane.
+  int? front(Level l, int lane) =>
+      open(l, lane) ? l.lanes[lane][taken[lane]] : null;
+
   GamePhase phase(Level l) {
     if (busIndex >= l.buses.length) return GamePhase.won;
     if (waiting.length >= slots) return GamePhase.failed;
@@ -178,71 +192,8 @@ class Board {
   BusColor? currentBus(Level l) =>
       busIndex < l.buses.length ? l.buses[busIndex] : null;
 
-  /// Cells that have a clear walk to the stop: row 0, or next to open
-  /// pavement that is itself connected to row 0.
-  Set<int> reachable(Level l) {
-    final open = <int>{};
-    final queue = <int>[];
-    for (int c = 0; c < l.cols; c++) {
-      if (people[c] < 0) {
-        open.add(c);
-        queue.add(c);
-      }
-    }
-    final result = <int>{
-      for (int c = 0; c < l.cols; c++)
-        if (people[c] >= 0) c,
-    };
-    while (queue.isNotEmpty) {
-      final i = queue.removeLast();
-      for (final n in neighbours(l, i)) {
-        if (people[n] >= 0) {
-          result.add(n);
-        } else if (open.add(n)) {
-          queue.add(n);
-        }
-      }
-    }
-    return result;
-  }
-
-  /// Shortest walk from [cell] through open pavement to row 0, inclusive.
-  List<int> walk(Level l, int cell) {
-    final previous = <int, int>{cell: cell};
-    final queue = [cell];
-    for (int head = 0; head < queue.length; head++) {
-      final i = queue[head];
-      if (i < l.cols) {
-        final path = [i];
-        var at = i;
-        while (at != cell) {
-          at = previous[at]!;
-          path.add(at);
-        }
-        return path.reversed.toList();
-      }
-      for (final n in neighbours(l, i)) {
-        if (people[n] < 0 && !previous.containsKey(n)) {
-          previous[n] = i;
-          queue.add(n);
-        }
-      }
-    }
-    return [cell];
-  }
-
-  static List<int> neighbours(Level l, int i) {
-    final r = i ~/ l.cols, c = i % l.cols;
-    return [
-      if (r > 0) i - l.cols,
-      if (r < l.rows - 1) i + l.cols,
-      if (c > 0) i - 1,
-      if (c < l.cols - 1) i + 1,
-    ];
-  }
-
   Map<String, dynamic> toJson() => {
-    'people': people,
+    'taken': taken,
     'waiting': waiting.map((c) => c.index).toList(),
     'bus': busIndex,
     'boarded': boarded,
@@ -252,7 +203,7 @@ class Board {
   };
   factory Board.fromJson(Map<String, dynamic> j, Level level) {
     final b = Board(
-      people: (j['people'] as List).cast<int>(),
+      taken: (j['taken'] as List).cast<int>(),
       waiting: (j['waiting'] as List)
           .map((c) => BusColor.values[c as int])
           .toList(),
@@ -268,7 +219,7 @@ class Board {
 
   /// Rejects saves that break passenger conservation or settled boarding.
   void validate(Level l) {
-    if (people.length != l.cells.length ||
+    if (taken.length != l.lanes.length ||
         busIndex < 0 ||
         busIndex > l.buses.length ||
         boarded < 0 ||
@@ -280,11 +231,15 @@ class Board {
       throw const FormatException('Invalid board dimensions');
     }
     final left = List.filled(BusColor.values.length, 0);
-    for (int i = 0; i < people.length; i++) {
-      if (people[i] >= 0 && people[i] != l.cells[i]) {
-        throw const FormatException('Passenger changed colour');
+    var count = 0;
+    for (int i = 0; i < taken.length; i++) {
+      if (taken[i] < 0 || taken[i] > l.lanes[i].length) {
+        throw const FormatException('Invalid lane progress');
       }
-      if (people[i] < 0 && l.cells[i] >= 0) left[l.cells[i]]++;
+      for (int d = 0; d < taken[i]; d++) {
+        left[l.lanes[i][d]]++;
+      }
+      count += taken[i];
     }
     final seated = List.filled(BusColor.values.length, 0);
     for (int b = 0; b < busIndex; b++) {
@@ -294,8 +249,7 @@ class Board {
     for (final w in waiting) {
       seated[w.index]++;
     }
-    if (jsonEncode(left) != jsonEncode(seated) ||
-        moves != l.cells.where((c) => c >= 0).length - remaining) {
+    if (jsonEncode(left) != jsonEncode(seated) || moves != count) {
       throw const FormatException('Save violates conservation');
     }
     final bus = currentBus(l);
@@ -305,16 +259,17 @@ class Board {
   }
 
   String get searchKey =>
-      '${people.map((p) => p < 0 ? '.' : '#').join()}:${(waiting.map((c) => c.index).toList()..sort()).join()}:$slots';
+      '${taken.join(',')}:${(waiting.map((c) => c.index).toList()..sort()).join()}:$slots';
 }
 
 class MoveResult {
   const MoveResult(
     this.board, {
     this.accepted = false,
-    this.cell = -1,
-    this.path = const [],
+    this.lane = -1,
+    this.color,
     this.toBus = false,
+    this.seat = -1,
     this.waitingSlot = -1,
     this.fromWaiting = const [],
     this.departures = 0,
@@ -322,15 +277,17 @@ class MoveResult {
   final Board board;
   final bool accepted;
 
-  /// Tapped cell and its walk to the stop.
-  final int cell;
-  final List<int> path;
+  /// Tapped lane and the colour of the passenger who left it.
+  final int lane;
+  final BusColor? color;
 
-  /// Whether the passenger boarded directly, or the waiting slot they took.
+  /// Whether the passenger boarded directly (and their seat), or the
+  /// waiting slot they took.
   final bool toBus;
-  final int waitingSlot;
+  final int seat, waitingSlot;
 
-  /// Waiting slots (indices before the move) whose passengers boarded later.
+  /// Waiting slots (indices before the move) whose passengers boarded the
+  /// buses that pulled in after this move, in boarding order.
   final List<int> fromWaiting;
   final int departures;
 }

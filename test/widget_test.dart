@@ -65,7 +65,7 @@ void main() {
     await tap(t, 'tutorial-done');
     expect(c.onboarded, true);
     while (c.board.phase(c.level) == GamePhase.playing) {
-      await tap(t, 'cell-${GameEngine.solve(c.level, c.board)!.first}');
+      await tap(t, 'lane-${GameEngine.solve(c.level, c.board)!.first}');
     }
     expect(find.byKey(const ValueKey('win')), findsOneWidget);
     expect(c.coins, 175);
@@ -83,16 +83,16 @@ void main() {
     c.history = [];
     c.settings(reducedMotion: true);
     await tap(t, 'play');
-    for (final cell in trafficFailure) {
-      await tap(t, 'cell-$cell');
+    for (final lane in trafficFailure) {
+      await tap(t, 'lane-$lane');
     }
     expect(find.byKey(const ValueKey('fail')), findsOneWidget);
     await tap(t, 'continue');
     await tap(t, 'use-coins');
     expect(c.coins, 100);
     expect(c.board.slots, 6);
-    for (final cell in [6, 7, 8, 5, 9, 10, 11]) {
-      await tap(t, 'cell-$cell');
+    for (final lane in trafficRecovery) {
+      await tap(t, 'lane-$lane');
     }
     expect(find.byKey(const ValueKey('win')), findsOneWidget);
     expect(t.takeException(), isNull);
@@ -102,8 +102,8 @@ void main() {
     await tap(t, 'play');
     await tap(t, 'hint');
     await tap(t, 'use-coins');
-    expect(c.hintCell, isNotNull);
-    await tap(t, 'cell-${c.hintCell}');
+    expect(c.hintLane, isNotNull);
+    await tap(t, 'lane-${c.hintLane}');
     await tap(t, 'undo');
     expect(c.board.moves, 0);
     await tap(t, 'restart');
@@ -155,7 +155,7 @@ void main() {
     await tap(t, 'play');
     await tap(t, 'hint');
     await tap(t, 'watch-ad');
-    expect(c.hintCell, isNull);
+    expect(c.hintLane, isNull);
     expect(c.coins, 150);
     expect(find.textContaining('Video unavailable'), findsOneWidget);
     expect(t.takeException(), isNull);
@@ -171,13 +171,13 @@ void main() {
       await t.pumpWidget(BusJamApp(controller: c, audioEnabled: false));
       await t.pumpAndSettle();
       await tap(t, 'play');
-      await tap(t, 'cell-${c.level.solution.first}');
+      await tap(t, 'lane-${c.level.solution.first}');
       t.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
       await c.save();
       t.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
       final r = GameController(store: s);
       await r.load();
-      expect(r.board.remaining, c.board.remaining);
+      expect(r.board.remaining(r.level), c.board.remaining(c.level));
       expect(r.board.moves, c.board.moves);
       await t.pumpWidget(
         BusJamApp(

@@ -21,7 +21,7 @@ void main() {
       c.restart();
       await tap(t, 'play');
       for (int i = 0; i < trafficFailure.length; i++) {
-        await t.tap(find.byKey(ValueKey('cell-${trafficFailure[i]}')));
+        await t.tap(find.byKey(ValueKey('lane-${trafficFailure[i]}')));
         await t.pump(const Duration(milliseconds: 40));
         expect(c.board.moves, i + 1);
       }
@@ -110,14 +110,14 @@ void main() {
       await tap(t, 'play');
       await tap(t, 'hint');
       await tap(t, 'use-coins');
-      for (final cell in c.level.solution) {
-        await tap(t, 'cell-$cell');
+      for (final lane in c.level.solution) {
+        await tap(t, 'lane-$lane');
       }
       expect(find.text('1850'), findsOneWidget);
       expect(c.routeRecord(1)!.stars, 2);
       await tap(t, 'replay');
-      for (final cell in c.level.solution) {
-        await tap(t, 'cell-$cell');
+      for (final lane in c.level.solution) {
+        await tap(t, 'lane-$lane');
       }
       expect(find.text('2000'), findsOneWidget);
       expect(c.routeRecord(1)!.stars, 3);

@@ -38,7 +38,7 @@ void main() {
         await t.ensureVisible(f);
         await t.tap(f);
         await t.pumpAndSettle();
-        if (key.startsWith('cell-')) await waitForResult();
+        if (key.startsWith('lane-')) await waitForResult();
       }
 
       Future<void> shot(String name) async {
@@ -56,8 +56,8 @@ void main() {
       await shot('native-game');
       // Each tap is accepted while earlier passengers are still walking.
       final route = GameEngine.solve(c.level, c.board)!;
-      for (final cell in route) {
-        final target = find.byKey(ValueKey('cell-$cell'));
+      for (final lane in route) {
+        final target = find.byKey(ValueKey('lane-$lane'));
         await t.ensureVisible(target);
         await t.tap(target);
         await t.pump(const Duration(milliseconds: 40));
@@ -72,8 +72,8 @@ void main() {
       expect(c.level.number, 2);
       await tap('hint');
       await tap('use-coins');
-      expect(c.hintCell, isNotNull);
-      await tap('cell-${c.hintCell}');
+      expect(c.hintLane, isNotNull);
+      await tap('lane-${c.hintLane}');
       await c.save();
       final saved = c.board.toJson();
       await app.main();
@@ -85,16 +85,16 @@ void main() {
       restored.unlocked = 12;
       restored.restart();
       await t.pumpAndSettle();
-      for (final cell in trafficFailure) {
-        await tap('cell-$cell');
+      for (final lane in trafficFailure) {
+        await tap('lane-$lane');
       }
       expect(find.byKey(const ValueKey('fail')), findsOneWidget);
       await shot('native-fail');
       await tap('continue');
       await tap('use-coins');
       expect(restored.board.slots, 6);
-      for (final cell in [6, 7, 8, 5, 9, 10, 11]) {
-        await tap('cell-$cell');
+      for (final lane in trafficRecovery) {
+        await tap('lane-$lane');
       }
       expect(find.byKey(const ValueKey('win')), findsOneWidget);
       restored.restart();
@@ -108,8 +108,8 @@ void main() {
       collector.openLevel(collector.unlocked);
       await t.pumpAndSettle();
       for (int number = 13; number <= 19; number++) {
-        for (final cell in collector.level.solution) {
-          await tap('cell-$cell');
+        for (final lane in collector.level.solution) {
+          await tap('lane-$lane');
         }
         expect(collector.lastResult!.stars, 3);
         if (number < 19) await tap('next');

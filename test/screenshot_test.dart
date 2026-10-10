@@ -69,20 +69,20 @@ void main() {
     await shot('01-home');
     await press('play');
     await shot('02-gameplay');
-    for (final cell in c.level.solution.take(4)) {
-      await press('cell-$cell');
+    for (final lane in c.level.solution.take(4)) {
+      await press('lane-$lane');
     }
     await shot('02b-gameplay-progress');
     while (c.board.phase(c.level) == GamePhase.playing) {
-      await press('cell-${GameEngine.solve(c.level, c.board)!.first}');
+      await press('lane-${GameEngine.solve(c.level, c.board)!.first}');
     }
     await shot('03-win');
     c.level = trafficFixture();
     c.unlocked = 12;
     c.restart();
     await t.pumpAndSettle();
-    for (final cell in trafficFailure) {
-      await press('cell-$cell');
+    for (final lane in trafficFailure) {
+      await press('lane-$lane');
     }
     await shot('04-fail');
     c.restart();

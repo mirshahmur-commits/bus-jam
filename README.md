@@ -1,12 +1,12 @@
 # Bus Surge
 
 A Flutter/Dart crowd-to-bus puzzle for iOS first, with Android and web sources.
-Code-drawn toy buses and passengers on a lavender city stop, bundled Nunito
+Code-drawn open-top toy buses and chunky passengers on a lavender city stop, bundled Nunito
 typography, walking/boarding/departure motion, procedural sound and an offline
 game engine.
 
 Version 2.0 replaces the depot puzzle with the classic bus-jam loop: a crowd
-of passengers below, buses arriving one by one above and five waiting slots in
+of passengers queuing below, buses arriving one by one above and five waiting slots in
 between. See [crowd rules](docs/REDESIGN.md). Old saves keep coins, unlocked
 routes, collection and settings; the active board restarts as a crowd puzzle.
 
@@ -14,14 +14,15 @@ routes, collection and settings; the active board restarts as a crowd puzzle.
 
 ## Play
 
-Tap a **passenger with a clear path** to the stop. If their colour matches the
-bus at the stop they board; otherwise they wait in one of the five slots. A
-full bus (three seats) leaves and the next one pulls in, collecting matching
-waiting passengers automatically. Board everyone to win. All five slots full
-means the stop is jammed.
+Tap a **lane** to send its front passenger to the stop; the line steps
+forward and the crowd keeps streaming up. If their colour matches the bus at
+the stop they walk in and sit down; otherwise they wait in one of the five
+slots. A full bus (three seats) leaves and the next one pulls in, and matching
+waiting passengers board by themselves. Board everyone to win. All five slots
+full means the stop is jammed; the lock tile sells one extra slot.
 
-- Deterministic, solver-verified crowds that grow from 3×3 to 7×6 with up to six colours.
-- Hidden **?** passengers reveal their colour once their path opens.
+- Deterministic, solver-verified crowds: from three short lanes to five long lines and six colours.
+- Hidden **?** passengers reveal their colour at the front of their lane.
 - Input during animation; solver-based hints, one free undo, restart, extra-slot continue.
 - Exact mid-level saves and recovery from corrupt saves; serialized writes.
 - Coins: 150 at install, 25 on first completion of a route, 75 on first daily win.

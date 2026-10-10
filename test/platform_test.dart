@@ -88,8 +88,8 @@ void main() {
       c.unlocked = 6;
       c.openLevel(6);
       c.totalWins = 3;
-      for (final cell in GameEngine.solve(c.level, c.board)!) {
-        c.tap(cell);
+      for (final lane in GameEngine.solve(c.level, c.board)!) {
+        c.tap(lane);
       }
       await c.next();
       expect(c.level.number, 7);

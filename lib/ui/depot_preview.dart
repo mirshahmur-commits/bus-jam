@@ -60,7 +60,7 @@ class _DepotPainter extends CustomPainter {
     if (!busOnly) {
       c.drawRect(
         Rect.fromLTWH(0, roadBottom, s.width, s.height - roadBottom),
-        Paint()..color = pal.tile,
+        Paint()..color = pal.stop,
       );
       final step = s.width / 9;
       const crowd = [2, 0, 4, 1, 2, 3, 5, 0];

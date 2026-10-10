@@ -53,8 +53,8 @@ void traffic(GameController c) {
 
 void win(GameController c) {
   final solution = GameEngine.solve(c.level, c.board)!;
-  for (final cell in solution) {
-    c.tap(cell);
+  for (final lane in solution) {
+    c.tap(lane);
   }
 }
 
@@ -99,7 +99,7 @@ void main() {
     await c.load();
     expect(c.spend(Assist.hint), true);
     expect(c.coins, 125);
-    expect(c.hintCell, isNotNull);
+    expect(c.hintLane, isNotNull);
     expect(c.board.moves, 0);
   });
   test('BR-20 insufficient coins leaves state untouched', () async {
@@ -107,7 +107,7 @@ void main() {
     await c.load();
     c.coins = 0;
     expect(c.spend(Assist.hint), false);
-    expect(c.hintCell, isNull);
+    expect(c.hintLane, isNull);
   });
   test('BR-21 undo rolls back passengers, bus and moves exactly', () async {
     final c = create();
@@ -138,8 +138,8 @@ void main() {
     final c = create();
     await c.load();
     traffic(c);
-    for (final cell in trafficFailure) {
-      c.tap(cell);
+    for (final lane in trafficFailure) {
+      c.tap(lane);
     }
     expect(c.board.phase(c.level), GamePhase.failed);
     expect(c.spend(Assist.extraSlot), true);
@@ -163,7 +163,7 @@ void main() {
       final c = create(ads: a);
       await c.load();
       expect(await c.watch(Assist.hint), false);
-      expect(c.hintCell, isNull);
+      expect(c.hintLane, isNull);
       expect(c.coins, 150);
       expect(c.busy, false);
     });
@@ -173,7 +173,7 @@ void main() {
     final c = create(ads: a);
     await c.load();
     expect(await c.watch(Assist.hint), true);
-    expect(c.hintCell, isNotNull);
+    expect(c.hintLane, isNotNull);
     expect(c.coins, 150);
     expect(a.calls, 1);
   });

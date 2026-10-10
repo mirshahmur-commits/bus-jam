@@ -2,33 +2,37 @@
 
 ## Board
 
-A crowd stands on a grid below the bus stop; row 0 touches the stop. Buses
-arrive one at a time in a fixed, visible order (Plan sheet: tap "buses").
+Passengers queue in three to five lanes inside a corridor that streams off
+the bottom of the screen; the front of every lane faces the bus stop. Buses
+arrive one at a time in a fixed order (the bus pill shows the line-up).
 Every bus seats three passengers.
 
-1. A passenger can walk when they stand in row 0, or next to open pavement
-   connected to row 0. Others are blocked and drawn slightly darker.
-2. A walking passenger whose colour matches the bus at the stop boards it.
-   Anyone else takes the next free waiting slot (five slots).
-3. A full bus leaves. The next bus pulls in and collects matching waiting
-   passengers in arrival order; this can fill and send away several buses.
-4. Every bus departed = win. Five occupied slots = fail. Taps on blocked
-   or empty cells, and taps after the result, are no-ops.
-5. Passengers marked **?** hide their colour until their path is open.
-6. One continue adds a sixth slot for the attempt. Undo retains it; restart
+1. Tapping a lane sends its front passenger to the stop; the whole lane
+   steps forward, so the crowd keeps flowing up from below.
+2. A passenger whose colour matches the bus at the stop walks in and sits
+   down. Anyone else takes the next free waiting slot (five slots).
+3. A full bus leaves. The next bus pulls in and the matching waiting
+   passengers board by themselves, in arrival order; this can fill and send
+   away several buses.
+4. Every bus departed = win. Five occupied slots = fail. Taps on empty
+   lanes, and taps after the result, are no-ops.
+5. Passengers marked **?** hide their colour until they reach the front.
+6. The purple lock tile sells one extra slot for the attempt (coins or a
+   rewarded video), while playing or after a jam. Undo retains it; restart
    returns to five slots.
 
 ## Generation
 
-Generator 3 removes the crowd in a random walk-out order (each step frees a
-reachable passenger), colours that order by the bus sequence, then swaps
+Generator 3 builds a random walk-out order over the lanes (each step takes
+the front of a lane), colours that order by the bus sequence, then swaps
 nearby colours for difficulty. Each candidate must be solved by the exact
-solver with fewer slots than the player gets (three spare slots on routes
-1–3, two to route 10, one to route 25, none afterwards; every fifth route is a
-lighter breather). If no candidate passes, the unshuffled order is the route.
-The witness is replayed through the real engine with save validation at every
-move; seeds and full level content persist. Crowds grow from 3×3 (route 1) to
-7×6, colours from two to six; hidden passengers start at route 8.
+solver with fewer slots than the player gets (three spare slots on levels
+1–3, two to level 10, one to level 25, none afterwards; every fifth level is
+a lighter breather). If no candidate passes, the unshuffled order is the
+route. The witness is replayed through the real engine with save validation
+at every move; seeds and full level content persist. Lines grow from three
+short lanes (level 1) to five lanes of about fifteen passengers, colours
+from two to six; hidden passengers start at level 8.
 
 ## Scoring
 
@@ -42,7 +46,7 @@ extra slots.
 
 ## Saves
 
-Save schema 3 stores the crowd board, waiting slots and bus progress. Schema 1
+Save schema 3 stores lane progress, waiting slots and bus progress. Schema 1
 and 2 saves (depot puzzle) keep coins, unlocked routes, collection, settings,
 streak and purchases and open the same route number as a crowd puzzle. Medals
 earned on retired boards do not count toward crowd-route stars.

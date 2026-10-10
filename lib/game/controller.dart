@@ -51,7 +51,7 @@ class GameController extends ChangeNotifier {
       onboarded = false;
   bool saveFailed = false;
   String? completedDay, message;
-  int? hintCell;
+  int? hintLane;
   DateTime? lastAd;
   AdPolicy adPolicy = const AdPolicy();
   MoveResult? lastMove;
@@ -319,11 +319,11 @@ class GameController extends ChangeNotifier {
     }
   }
 
-  MoveResult tap(int cell) {
+  MoveResult tap(int lane) {
     if (busy) {
       return MoveResult(board);
     }
-    final result = GameEngine.tap(level, board, cell);
+    final result = GameEngine.tap(level, board, lane);
     if (!result.accepted) {
       return result;
     }
@@ -333,9 +333,9 @@ class GameController extends ChangeNotifier {
     }
     board = result.board;
     lastMove = result;
-    hintCell = null;
+    hintLane = null;
     _epoch++;
-    _track('passenger_tap', {'cell': cell, 'boarded': result.toBus});
+    _track('passenger_tap', {'lane': lane, 'boarded': result.toBus});
     if (board.phase(level) == GamePhase.won) {
       var reward = 0;
       if (dailyMode) {
@@ -436,7 +436,7 @@ class GameController extends ChangeNotifier {
     attempts++;
     board = Board.initial(level);
     history = [];
-    hintCell = null;
+    hintLane = null;
     lastMove = null;
     _resetRun();
     _track('restart');
@@ -455,7 +455,7 @@ class GameController extends ChangeNotifier {
     board = Board.initial(level);
     history = [];
     attempts = 1;
-    hintCell = null;
+    hintLane = null;
     lastMove = null;
     _resetRun();
     _track('level_start');
@@ -506,7 +506,7 @@ class GameController extends ChangeNotifier {
     board = Board.initial(level);
     history = [];
     attempts = 1;
-    hintCell = null;
+    hintLane = null;
     lastMove = null;
     _resetRun();
     _track('level_start');
@@ -533,7 +533,7 @@ class GameController extends ChangeNotifier {
       history = [];
       _resetRun();
     }
-    hintCell = null;
+    hintLane = null;
     lastMove = null;
     _changed();
   }
@@ -550,7 +550,7 @@ class GameController extends ChangeNotifier {
         Assist.undo =>
           history.isNotEmpty && board.phase(level) != GamePhase.won,
         Assist.extraSlot =>
-          board.phase(level) == GamePhase.failed && !board.continued,
+          board.phase(level) != GamePhase.won && !board.continued,
       };
   bool _assist(Assist action, {required bool paid}) {
     if (!available(action) || (paid && coins < cost(action))) {
@@ -564,14 +564,14 @@ class GameController extends ChangeNotifier {
         notifyListeners();
         return false;
       }
-      hintCell = route.first;
+      hintLane = route.first;
       usedHint = true;
     } else if (action == Assist.undo) {
       final continued = board.continued;
       final previous = history.removeLast();
       board = continued
           ? Board(
-              people: previous.people,
+              taken: previous.taken,
               waiting: previous.waiting,
               busIndex: previous.busIndex,
               boarded: previous.boarded,
@@ -580,7 +580,7 @@ class GameController extends ChangeNotifier {
               continued: true,
             )
           : previous;
-      hintCell = null;
+      hintLane = null;
       lastMove = null;
       freeUndoUsed = true;
       undosUsed++;

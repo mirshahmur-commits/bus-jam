@@ -1,16 +1,23 @@
 import 'package:bus_jam/game/model.dart';
 
-/// A coral bus waits while the front row holds other colours. Five wrong
-/// taps fill the waiting slots; the witness opens a path to the coral row.
+/// A coral bus waits while every lane starts with another colour. Five
+/// wrong taps fill the waiting slots; the witness digs out the coral riders.
 Level trafficFixture() => Level(
   number: 12,
   seed: 12,
-  rows: 2,
-  cols: 6,
-  cells: const [1, 1, 1, 2, 2, 2, 0, 0, 0, 3, 3, 3],
+  lanes: const [
+    [1, 0, 0],
+    [1, 0, 2],
+    [1, 2, 2],
+    [3, 3, 3],
+  ],
   buses: const [BusColor.coral, BusColor.blue, BusColor.gold, BusColor.mint],
-  solution: const [0, 6, 7, 8, 1, 2, 3, 4, 5, 9, 10, 11],
+  solution: const [0, 0, 0, 1, 1, 2, 1, 2, 2, 3, 3, 3],
 );
 
-/// Taps that fill all five waiting slots of [trafficFixture].
-const trafficFailure = [0, 1, 2, 3, 4];
+/// Lane taps that fill all five waiting slots of [trafficFixture].
+const trafficFailure = [0, 1, 2, 3, 3];
+
+/// Lane taps that win [trafficFixture] after [trafficFailure] and one
+/// extra slot.
+const trafficRecovery = [0, 0, 1, 1, 2, 2, 3];

@@ -23,8 +23,8 @@ void main(List<String> args) {
       throw StateError('Non-determinism $n');
     }
     var board = Board.initial(level);
-    for (final cell in level.solution) {
-      final result = GameEngine.tap(level, board, cell);
+    for (final lane in level.solution) {
+      final result = GameEngine.tap(level, board, lane);
       if (!result.accepted) {
         throw StateError('Blocked witness $n');
       }
@@ -49,8 +49,8 @@ void main(List<String> args) {
         throw StateError('Solver missed a route $n');
       }
       var solved = Board.initial(level);
-      for (final cell in route) {
-        solved = GameEngine.tap(level, solved, cell).board;
+      for (final lane in route) {
+        solved = GameEngine.tap(level, solved, lane).board;
       }
       if (solved.phase(level) != GamePhase.won) {
         throw StateError('Bad hint $n');

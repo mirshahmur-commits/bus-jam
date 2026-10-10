@@ -10,7 +10,6 @@ import '../game/progression.dart';
 import 'art.dart';
 import 'depot_preview.dart';
 import 'game_scene.dart';
-import 'urban_assets.dart';
 
 class BusJamApp extends StatefulWidget {
   const BusJamApp({
@@ -190,16 +189,17 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
                   ],
                 ),
           body: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFFE4E8ED),
-                  Color(0xFFF2F1ED),
-                  Color(0xFFDCE2E8),
-                ],
-              ),
+            decoration: BoxDecoration(
+              color: page == 1
+                  ? ArenaPalette.forId(c.selectedTerminal).sky
+                  : null,
+              gradient: page == 1
+                  ? null
+                  : const LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Color(0xFFDCDAFA), Color(0xFFF1F0FF)],
+                    ),
             ),
             child: Center(
               child: ConstrainedBox(
@@ -290,17 +290,25 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
     VoidCallback? onTap, {
     Key? key,
     IconData icon = Icons.arrow_forward_rounded,
-  }) => SizedBox(
+  }) => Container(
     width: double.infinity,
-    height: 58,
+    height: 62,
+    padding: const EdgeInsets.only(bottom: 5),
+    decoration: BoxDecoration(
+      // A darker base under the button gives it a chunky, pressable edge.
+      color: const Color(0xFF1C8A4A),
+      borderRadius: BorderRadius.circular(18),
+    ),
     child: FilledButton(
       key: key,
       onPressed: c.busy ? null : onTap,
       style: FilledButton.styleFrom(
-        backgroundColor: teal,
+        backgroundColor: const Color(0xFF34C46F),
         foregroundColor: Colors.white,
+        disabledBackgroundColor: const Color(0xFF9FD8B5),
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        minimumSize: const Size.fromHeight(57),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),
       child: FittedBox(
         fit: BoxFit.scaleDown,
@@ -427,7 +435,7 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
         ),
         const SizedBox(height: 16),
         primary(
-          'Continue · Route ${c.board.phase(c.level) == GamePhase.won ? c.unlocked : c.level.number}',
+          'Play · Level ${c.board.phase(c.level) == GamePhase.won ? c.unlocked : c.level.number}',
           () {
             if (c.dailyMode) c.returnToCampaign();
             if (c.board.phase(c.level) == GamePhase.won) {
@@ -571,285 +579,272 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
     VoidCallback? onTap, {
     required String tip,
     Key? key,
-    Color color = Colors.white,
+    List<Color> colors = const [Color(0xFF5AB8FF), Color(0xFF2E7BE6)],
+    String? badge,
+    double size = 50,
   }) => Tooltip(
     message: tip,
-    child: Material(
-      color: color,
-      shape: const CircleBorder(
-        side: BorderSide(color: Color(0xFF3D3A78), width: 2.5),
-      ),
-      elevation: 2,
-      child: InkWell(
-        key: key,
-        customBorder: const CircleBorder(),
-        onTap: onTap,
+    child: GestureDetector(
+      key: key,
+      onTap: onTap,
+      child: Opacity(
+        opacity: onTap == null ? .55 : 1,
         child: SizedBox(
-          width: 46,
-          height: 46,
-          child: Icon(icon, color: const Color(0xFF3D3A78), size: 25),
+          width: size + 8,
+          height: size + 6,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: size,
+                height: size,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: colors,
+                  ),
+                  border: Border.all(color: Colors.white, width: 3),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x553B3680), offset: Offset(0, 3)),
+                  ],
+                ),
+                child: Icon(icon, color: Colors.white, size: size * .52),
+              ),
+              if (badge != null)
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 5,
+                      vertical: 1,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF3B3680),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.white, width: 1.5),
+                    ),
+                    child: Text(
+                      badge,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     ),
   );
 
-  Widget hudPill(Widget leading, String text, {Key? key}) => Container(
+  Widget hudPill(
+    Widget leading,
+    String text, {
+    Key? key,
+    VoidCallback? onTap,
+  }) => GestureDetector(
     key: key,
-    height: 36,
-    padding: const EdgeInsets.only(left: 4, right: 14),
-    decoration: BoxDecoration(
-      color: const Color(0xFF3D3A78).withValues(alpha: .85),
-      borderRadius: BorderRadius.circular(18),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        leading,
-        const SizedBox(width: 6),
-        Text(
-          text,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w900,
-            fontSize: 16,
+    onTap: onTap,
+    child: Container(
+      height: 34,
+      padding: const EdgeInsets.only(left: 2, right: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF3B3680).withValues(alpha: .72),
+        borderRadius: BorderRadius.circular(17),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          leading,
+          const SizedBox(width: 5),
+          Text(
+            text,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+              fontSize: 16,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     ),
   );
 
   Widget gamePage(BuildContext context) {
     final phase = c.board.phase(c.level);
-    final arena = ArenaPalette.forId(c.selectedTerminal);
-    return ColoredBox(
-      color: arena.sky,
-      child: Stack(
-        children: [
-          Column(
+    const top = 58.0;
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: GameScene(
+            key: ValueKey(
+              'scene-${c.level.generatorVersion}-${c.level.number}-${c.level.seed}',
+            ),
+            controller: c,
+            onMove: onMove,
+            top: top,
+            onLockTap: () {
+              if (c.available(Assist.extraSlot)) {
+                assist(context, Assist.extraSlot);
+              }
+            },
+            onIdle: () {
+              settleTimer?.cancel();
+              if (settling && mounted) setState(() => settling = false);
+            },
+          ),
+        ),
+        Positioned(
+          left: 10,
+          right: 10,
+          top: 8,
+          child: Row(
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
-                child: Row(
-                  children: [
-                    hudButton(
-                      Icons.arrow_back_rounded,
-                      home,
-                      tip: 'Home',
-                      key: const ValueKey('home-button'),
-                    ),
-                    const SizedBox(width: 8),
-                    hudPill(
-                      const Icon(
-                        Icons.monetization_on_rounded,
-                        color: Color(0xFFFFC93C),
-                        size: 28,
-                      ),
-                      '${c.coins}',
-                    ),
-                    Expanded(
-                      child: Column(
-                        children: [
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(
-                              c.dailyMode
-                                  ? 'DAILY RUSH'
-                                  : 'LEVEL ${c.level.number}',
-                              key: const ValueKey('level-title'),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 24,
-                                fontWeight: FontWeight.w900,
-                                shadows: [
-                                  Shadow(
-                                    color: Color(0xFF3D3A78),
-                                    offset: Offset(0, 2.5),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          if (c.level.hard)
-                            const Text(
-                              'HARD',
-                              style: TextStyle(
-                                color: Color(0xFFFFE07A),
-                                fontSize: 11,
-                                letterSpacing: 1.5,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    hudButton(
-                      Icons.settings_rounded,
-                      () => settings(context),
-                      tip: 'Settings',
-                      key: const ValueKey('game-settings'),
-                    ),
-                  ],
-                ),
+              hudButton(
+                Icons.arrow_back_rounded,
+                home,
+                tip: 'Home',
+                key: const ValueKey('home-button'),
+                size: 40,
+                colors: const [Color(0xFF7C76E0), Color(0xFF524BC0)],
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: LinearProgressIndicator(
-                          value:
-                              c.board.busIndex /
-                              c.level.buses.length.toDouble(),
-                          minHeight: 7,
-                          color: const Color(0xFFFFC93C),
-                          backgroundColor: Colors.white.withValues(alpha: .35),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    InkWell(
-                      key: const ValueKey('queue-preview'),
-                      onTap: () => previewQueue(context),
-                      child: Text(
-                        '${c.board.busIndex}/${c.level.buses.length} buses',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ],
+              hudPill(
+                const Icon(
+                  Icons.monetization_on_rounded,
+                  color: Color(0xFFFFC93C),
+                  size: 30,
                 ),
+                '${c.coins}',
               ),
               Expanded(
-                child: GameScene(
-                  key: ValueKey(
-                    'scene-${c.level.generatorVersion}-${c.level.number}-${c.level.seed}',
+                child: Center(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF3B3680).withValues(alpha: .72),
+                        borderRadius: BorderRadius.circular(17),
+                      ),
+                      child: Text(
+                        c.dailyMode ? 'DAILY' : 'LEVEL ${c.level.number}',
+                        key: const ValueKey('level-title'),
+                        style: TextStyle(
+                          color: c.level.hard
+                              ? const Color(0xFFFFD45C)
+                              : Colors.white,
+                          fontSize: 21,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: .5,
+                        ),
+                      ),
+                    ),
                   ),
-                  controller: c,
-                  onMove: onMove,
-                  onIdle: () {
-                    settleTimer?.cancel();
-                    if (settling && mounted) setState(() => settling = false);
-                  },
                 ),
               ),
-              Container(
-                color: arena.sky,
-                padding: const EdgeInsets.fromLTRB(14, 6, 14, 10),
-                child: Column(
-                  children: [
-                    Text(
-                      c.hintCell == null
-                          ? c.level.lesson
-                          : 'Tap the glowing passenger.',
-                      textAlign: TextAlign.center,
-                      maxLines: MediaQuery.sizeOf(context).height < 700 ? 1 : 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        toolButton(
-                          context,
-                          Assist.undo,
-                          Icons.undo_rounded,
-                          'Undo',
-                        ),
-                        const SizedBox(width: 9),
-                        toolButton(
-                          context,
-                          Assist.hint,
-                          Icons.lightbulb_outline_rounded,
-                          'Hint',
-                        ),
-                        const SizedBox(width: 9),
-                        Expanded(
-                          child: FilledButton.tonal(
-                            key: const ValueKey('restart'),
-                            onPressed: c.busy
-                                ? null
-                                : () => confirmRestart(context),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: ink,
-                              minimumSize: const Size(0, 54),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                            ),
-                            child: const Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.refresh_rounded, size: 21),
-                                FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: Text(
-                                    'Restart',
-                                    maxLines: 1,
-                                    softWrap: false,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 9),
-                        InkWell(
-                          onTap: () => scoreHelp(context),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.star_rounded,
-                                color: Color(0xFFFFC93C),
-                                size: 22,
-                              ),
-                              Text(
-                                '${c.parkingCost}/${c.level.parkingTarget}',
-                                key: const ValueKey('parking-cost'),
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w900,
-                                  color: c.parkingCost > c.level.parkingTarget
-                                      ? const Color(0xFFFFD1C4)
-                                      : Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (c.saveFailed)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 6),
-                        child: Text(
-                          'Save unavailable',
-                          style: TextStyle(color: Colors.red),
-                        ),
-                      ),
-                  ],
+              hudPill(
+                const Padding(
+                  padding: EdgeInsets.only(left: 8),
+                  child: Icon(
+                    Icons.directions_bus_rounded,
+                    color: Color(0xFFFFC93C),
+                    size: 20,
+                  ),
                 ),
+                '${c.level.buses.length - c.board.busIndex}',
+                key: const ValueKey('queue-preview'),
+                onTap: () => previewQueue(context),
               ),
             ],
           ),
-          if (phase != GamePhase.playing && !settling)
-            resultOverlay(context, phase),
-        ],
-      ),
+        ),
+        Positioned(
+          left: 8,
+          top: top + 8,
+          child: Column(
+            children: [
+              hudButton(
+                Icons.settings_rounded,
+                () => settings(context),
+                tip: 'Settings',
+                key: const ValueKey('game-settings'),
+              ),
+              const SizedBox(height: 6),
+              hudButton(
+                Icons.refresh_rounded,
+                c.busy ? null : () => confirmRestart(context),
+                tip: 'Restart',
+                key: const ValueKey('restart'),
+                colors: const [Color(0xFFD38BFF), Color(0xFF9B4DE8)],
+              ),
+            ],
+          ),
+        ),
+        Positioned(
+          right: 8,
+          top: top + 8,
+          child: Column(
+            children: [
+              toolButton(context, Assist.hint, Icons.lightbulb_rounded, 'Hint'),
+              const SizedBox(height: 6),
+              toolButton(context, Assist.undo, Icons.undo_rounded, 'Undo'),
+            ],
+          ),
+        ),
+        if (c.hintLane != null || c.level.number <= 8 && c.board.moves < 4)
+          Positioned(
+            left: 24,
+            right: 24,
+            bottom: 14,
+            child: IgnorePointer(
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF3B3680).withValues(alpha: .85),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    c.hintLane == null
+                        ? c.level.lesson
+                        : 'Tap the glowing lane.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        if (c.saveFailed)
+          const Positioned(
+            left: 0,
+            right: 0,
+            bottom: 60,
+            child: Text(
+              'Save unavailable',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        if (phase != GamePhase.playing && !settling)
+          resultOverlay(context, phase),
+      ],
     );
   }
 
@@ -912,36 +907,23 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
     Assist action,
     IconData icon,
     String text,
-  ) => Expanded(
-    child: FilledButton.tonal(
-      key: ValueKey(action.name),
-      onPressed: c.available(action)
-          ? () {
-              if (c.cost(action) == 0) {
-                c.spend(action);
-              } else {
-                assist(context, action);
-              }
+  ) => hudButton(
+    icon,
+    c.available(action)
+        ? () {
+            if (c.cost(action) == 0) {
+              c.spend(action);
+            } else {
+              assist(context, action);
             }
-          : null,
-      style: FilledButton.styleFrom(
-        backgroundColor: Colors.white,
-        foregroundColor: ink,
-        minimumSize: const Size(0, 58),
-        padding: const EdgeInsets.symmetric(horizontal: 5),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 21),
-          Text(
-            '$text · ${c.cost(action) == 0 ? 'FREE' : c.cost(action)}',
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900),
-          ),
-        ],
-      ),
-    ),
+          }
+        : null,
+    tip: text,
+    key: ValueKey(action.name),
+    badge: c.cost(action) == 0 ? 'FREE' : '${c.cost(action)}',
+    colors: action == Assist.hint
+        ? const [Color(0xFFFFD45C), Color(0xFFF59E0B)]
+        : const [Color(0xFF6EE7A8), Color(0xFF22B573)],
   );
 
   Widget resultOverlay(BuildContext context, GamePhase phase) {
@@ -960,14 +942,14 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
                   SizedBox(
                     height: won ? 90 : 100,
                     width: double.infinity,
-                    child: UrbanArtwork(won ? 'win' : 'fail'),
+                    child: CustomPaint(painter: ResultArtPainter(won)),
                   ),
                   const SizedBox(height: 12),
                   Text(
                     won
                         ? result?.stars == 3
-                              ? 'Perfect dispatch!'
-                              : 'Route complete!'
+                              ? 'Perfect!'
+                              : 'Level complete!'
                         : 'Slots full!',
                     key: ValueKey(won ? 'win' : 'fail'),
                     textAlign: TextAlign.center,
@@ -1045,7 +1027,7 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
                     ),
                     const SizedBox(height: 19),
                     primary(
-                      c.dailyMode ? 'Back to my routes' : 'Next route',
+                      c.dailyMode ? 'Back to my routes' : 'Next level',
                       () {
                         if (c.dailyMode) {
                           home();

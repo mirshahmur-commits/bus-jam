@@ -2,28 +2,24 @@ import 'model.dart';
 
 /// Pure deterministic rules for the crowd puzzle.
 class GameEngine {
-  /// Walks the passenger at [cell] to the stop. A matching passenger boards
-  /// the bus; anyone else takes the next free waiting slot. Full buses leave
-  /// and the next bus collects matching waiting passengers in arrival order.
-  static MoveResult tap(Level level, Board board, int cell) {
-    if (board.phase(level) != GamePhase.playing ||
-        cell < 0 ||
-        cell >= board.people.length ||
-        board.people[cell] < 0 ||
-        !board.reachable(level).contains(cell)) {
+  /// Sends the front passenger of [lane] to the stop. A matching passenger
+  /// boards the bus; anyone else takes the next free waiting slot. Full buses
+  /// leave and the next bus collects matching waiting passengers by itself.
+  static MoveResult tap(Level level, Board board, int lane) {
+    if (board.phase(level) != GamePhase.playing || !board.open(level, lane)) {
       return MoveResult(board);
     }
-    final path = board.walk(level, cell);
-    final people = board.people.toList();
-    final color = BusColor.values[people[cell]];
-    people[cell] = -1;
+    final color = BusColor.values[board.front(level, lane)!];
+    final taken = board.taken.toList();
+    taken[lane]++;
     var busIndex = board.busIndex, boarded = board.boarded;
     final waiting = <(BusColor, int)>[
       for (int i = 0; i < board.waiting.length; i++) (board.waiting[i], i),
     ];
-    var toBus = false, slot = -1, departures = 0;
+    var toBus = false, seat = -1, slot = -1, departures = 0;
     final fromWaiting = <int>[];
     if (level.buses[busIndex] == color) {
+      seat = boarded;
       boarded++;
       toBus = true;
     } else {
@@ -47,7 +43,7 @@ class GameEngine {
       }
     }
     final next = Board(
-      people: people,
+      taken: taken,
       waiting: waiting.map((w) => w.$1).toList(),
       busIndex: busIndex,
       boarded: boarded,
@@ -58,21 +54,23 @@ class GameEngine {
     return MoveResult(
       next,
       accepted: true,
-      cell: cell,
-      path: List.unmodifiable(path),
+      lane: lane,
+      color: color,
       toBus: toBus,
+      seat: seat,
       waitingSlot: slot,
       fromWaiting: List.unmodifiable(fromWaiting),
       departures: departures,
     );
   }
 
+  /// One extra waiting slot per attempt, while playing or after a jam.
   static Board continueWithSlot(Level l, Board b) {
-    if (b.phase(l) != GamePhase.failed || b.continued) {
+    if (b.phase(l) == GamePhase.won || b.continued) {
       return b;
     }
     return Board(
-      people: b.people,
+      taken: b.taken,
       waiting: b.waiting,
       busIndex: b.busIndex,
       boarded: b.boarded,
@@ -82,7 +80,7 @@ class GameEngine {
     );
   }
 
-  /// Returns a genuine winning route of cell taps from the current state, or
+  /// Returns a genuine winning route of lane taps from the current state, or
   /// null for a dead end. Budget exhaustion never produces a fabricated hint.
   /// The solver knows hidden colours; hints never reveal them directly.
   static List<int>? solve(Level level, Board start, {int maxStates = 40000}) {
@@ -95,30 +93,23 @@ class GameEngine {
           !visited.add(b.searchKey)) {
         return null;
       }
-      final wanted = b.currentBus(level)!.index;
-      final choices = b.reachable(level).toList()..sort();
-      // Matching passengers first; one representative per waiting colour.
-      final matching = choices.where((i) => b.people[i] == wanted).toList();
-      final tried = <int>{};
-      final others = <int>[];
-      for (final i in choices) {
-        if (b.people[i] != wanted) others.add(i);
-      }
-      // Prefer passengers whose colour already waits or comes soon.
-      int soon(int i) {
+      // Prefer the bus colour, then colours whose bus comes soonest.
+      int soon(int lane) {
+        final color = b.front(level, lane)!;
         for (int k = b.busIndex; k < level.buses.length; k++) {
-          if (level.buses[k].index == b.people[i]) return k - b.busIndex;
+          if (level.buses[k].index == color) return k - b.busIndex;
         }
         return 99;
       }
 
-      others.sort((a, c) => soon(a).compareTo(soon(c)));
-      for (final cell in [...matching, ...others]) {
-        if (!tried.add(cell)) continue;
-        final result = tap(level, b, cell);
-        if (!result.accepted) continue;
+      final choices = [
+        for (int i = 0; i < b.taken.length; i++)
+          if (b.open(level, i)) i,
+      ]..sort((a, c) => soon(a).compareTo(soon(c)));
+      for (final lane in choices) {
+        final result = tap(level, b, lane);
         final tail = visit(result.board);
-        if (tail != null) return [cell, ...tail];
+        if (tail != null) return [lane, ...tail];
       }
       return null;
     }
@@ -130,8 +121,8 @@ class GameEngine {
   static int waitingCost(Level level, List<int> route) {
     var board = Board.initial(level);
     var cost = 0;
-    for (final cell in route) {
-      final result = tap(level, board, cell);
+    for (final lane in route) {
+      final result = tap(level, board, lane);
       if (!result.accepted) throw StateError('Blocked route');
       board = result.board;
       cost += board.waiting.length;
