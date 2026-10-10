@@ -51,7 +51,7 @@ class GameController extends ChangeNotifier {
       onboarded = false;
   bool saveFailed = false;
   String? completedDay, message;
-  int? hintLane;
+  int? hintCell;
   DateTime? lastAd;
   AdPolicy adPolicy = const AdPolicy();
   MoveResult? lastMove;
@@ -63,18 +63,19 @@ class GameController extends ChangeNotifier {
   bool usedHint = false, freeUndoUsed = false;
   int undosUsed = 0;
   int get parkingCost =>
-      history.fold(0, (sum, b) => sum + b.parked.length) + board.parked.length;
+      history.fold(0, (sum, b) => sum + b.waiting.length) +
+      board.waiting.length;
   String get recordKey => dailyMode
       ? 'daily:${level.seed}'
       : '${level.generatorVersion}:${level.number}';
-  RouteRecord? routeRecord(int number) => records['2:$number'];
+  RouteRecord? routeRecord(int number) => records['3:$number'];
   RouteRecord? get dailyRecord =>
       records['daily:${int.parse(_day(clock().toUtc()).replaceAll('-', ''))}'];
   int get totalStars => records.entries
-      .where((e) => e.key.startsWith('2:'))
+      .where((e) => e.key.startsWith('3:'))
       .fold(0, (sum, e) => sum + e.value.stars);
   int get perfectRoutes => records.entries
-      .where((e) => e.key.startsWith('2:') && e.value.stars == 3)
+      .where((e) => e.key.startsWith('3:') && e.value.stars == 3)
       .length;
   String get rank => totalStars >= 90
       ? 'Depot Master'
@@ -96,7 +97,8 @@ class GameController extends ChangeNotifier {
       final raw = await store.read();
       if (raw != null) {
         final j = jsonDecode(raw) as Map<String, dynamic>;
-        if (j['schema'] != 1 && j['schema'] != 2) {
+        final schema = j['schema'];
+        if (schema != 1 && schema != 2 && schema != 3) {
           throw const FormatException('Unknown save schema');
         }
         final nextUnlocked = j['unlocked'] as int;
@@ -104,22 +106,34 @@ class GameController extends ChangeNotifier {
         if (nextUnlocked < 1 || nextCoins < 0 || nextCoins > 1000000) {
           throw const FormatException('Invalid progress');
         }
-        final saved = _parseSession(j['session'] as Map<String, dynamic>);
         unlocked = nextUnlocked;
         coins = nextCoins;
-        level = saved.$1;
-        board = saved.$2;
-        history = saved.$3;
-        _restoreRun(j['session'] as Map<String, dynamic>);
-        dailyMode = j['daily'] as bool;
-        if (!dailyMode && level.number > unlocked) {
-          throw const FormatException('Locked saved level');
-        }
-        _campaign = j['campaign'] == null
-            ? null
-            : Map<String, dynamic>.from(j['campaign'] as Map);
-        if (_campaign != null) {
-          _parseSession(_campaign!);
+        if (schema == 3) {
+          final saved = _parseSession(j['session'] as Map<String, dynamic>);
+          level = saved.$1;
+          board = saved.$2;
+          history = saved.$3;
+          _restoreRun(j['session'] as Map<String, dynamic>);
+          dailyMode = j['daily'] as bool;
+          if (!dailyMode && level.number > unlocked) {
+            throw const FormatException('Locked saved level');
+          }
+          _campaign = j['campaign'] == null
+              ? null
+              : Map<String, dynamic>.from(j['campaign'] as Map);
+          if (_campaign != null) {
+            _parseSession(_campaign!);
+          }
+        } else {
+          // Schema 1/2 boards belong to the retired depot puzzle. Keep the
+          // player's economy, unlocks and collection; open the same route
+          // number as a crowd puzzle. Old medals do not transfer.
+          level = generator.generate(unlocked);
+          board = Board.initial(level);
+          history = [];
+          dailyMode = false;
+          _campaign = null;
+          _resetRun();
         }
         completedDay = j['completedDay'] as String?;
         streak = (j['streak'] as int).clamp(0, 100000);
@@ -133,21 +147,24 @@ class GameController extends ChangeNotifier {
         lastAd = j['lastAd'] == null
             ? null
             : DateTime.parse(j['lastAd'] as String);
-        if (j['schema'] == 2) {
+        if (schema != 1) {
           final savedRecords = j['records'] as Map<String, dynamic>? ?? {};
           if (savedRecords.length > 10000) {
             throw const FormatException('Too many records');
           }
           for (final entry in savedRecords.entries) {
-            if (!RegExp(r'^(1|2|daily):[0-9]+$').hasMatch(entry.key)) {
+            if (!RegExp(r'^(1|2|3|daily):[0-9]+$').hasMatch(entry.key)) {
               throw const FormatException('Invalid record key');
             }
+            if (schema == 2) continue;
             records[entry.key] = RouteRecord.fromJson(
               Map<String, dynamic>.from(entry.value as Map),
             );
           }
           for (final entry
-              in (j['rankedDailyScores'] as Map<String, dynamic>? ?? {})
+              in (schema == 2
+                      ? const <String, dynamic>{}
+                      : j['rankedDailyScores'] as Map<String, dynamic>? ?? {})
                   .entries) {
             final value = entry.value as int;
             if (!RegExp(r'^[0-9]{8}$').hasMatch(entry.key) ||
@@ -248,7 +265,7 @@ class GameController extends ChangeNotifier {
   }
 
   String snapshot() => jsonEncode({
-    'schema': 2,
+    'schema': 3,
     'unlocked': unlocked,
     'coins': coins,
     'session': _session(),
@@ -302,16 +319,11 @@ class GameController extends ChangeNotifier {
     }
   }
 
-  MoveResult release(int lane, {int? expectedBusId}) {
-    if (busy ||
-        (expectedBusId != null &&
-            (lane < 0 ||
-                lane >= board.lanes.length ||
-                board.lanes[lane].isEmpty ||
-                board.lanes[lane].first.id != expectedBusId))) {
+  MoveResult tap(int cell) {
+    if (busy) {
       return MoveResult(board);
     }
-    final result = GameEngine.release(level, board, lane);
+    final result = GameEngine.tap(level, board, cell);
     if (!result.accepted) {
       return result;
     }
@@ -321,9 +333,9 @@ class GameController extends ChangeNotifier {
     }
     board = result.board;
     lastMove = result;
-    hintLane = null;
+    hintCell = null;
     _epoch++;
-    _track('bus_release', {'lane': lane, 'boarded': result.boarding.length});
+    _track('passenger_tap', {'cell': cell, 'boarded': result.toBus});
     if (board.phase(level) == GamePhase.won) {
       var reward = 0;
       if (dailyMode) {
@@ -424,7 +436,7 @@ class GameController extends ChangeNotifier {
     attempts++;
     board = Board.initial(level);
     history = [];
-    hintLane = null;
+    hintCell = null;
     lastMove = null;
     _resetRun();
     _track('restart');
@@ -443,7 +455,7 @@ class GameController extends ChangeNotifier {
     board = Board.initial(level);
     history = [];
     attempts = 1;
-    hintLane = null;
+    hintCell = null;
     lastMove = null;
     _resetRun();
     _track('level_start');
@@ -494,7 +506,7 @@ class GameController extends ChangeNotifier {
     board = Board.initial(level);
     history = [];
     attempts = 1;
-    hintLane = null;
+    hintCell = null;
     lastMove = null;
     _resetRun();
     _track('level_start');
@@ -521,7 +533,7 @@ class GameController extends ChangeNotifier {
       history = [];
       _resetRun();
     }
-    hintLane = null;
+    hintCell = null;
     lastMove = null;
     _changed();
   }
@@ -552,23 +564,23 @@ class GameController extends ChangeNotifier {
         notifyListeners();
         return false;
       }
-      hintLane = route.first;
+      hintCell = route.first;
       usedHint = true;
     } else if (action == Assist.undo) {
       final continued = board.continued;
       final previous = history.removeLast();
       board = continued
           ? Board(
-              lanes: previous.lanes,
-              parked: previous.parked,
-              cursor: previous.cursor,
-              departed: previous.departed,
+              people: previous.people,
+              waiting: previous.waiting,
+              busIndex: previous.busIndex,
+              boarded: previous.boarded,
               moves: previous.moves,
               slots: level.slots + 1,
               continued: true,
             )
           : previous;
-      hintLane = null;
+      hintCell = null;
       lastMove = null;
       freeUndoUsed = true;
       undosUsed++;

@@ -1,90 +1,56 @@
 import 'model.dart';
 
-/// Pure deterministic rules. Only the front bus can enter an empty parking slot.
+/// Pure deterministic rules for the crowd puzzle.
 class GameEngine {
-  /// Exact minimum settled parking occupancy over a winning path. The graph
-  /// is acyclic: every release removes a bus from its lane. Parked bus order
-  /// remains in the key because equal-colour buses can have different sizes.
-  static RouteAnalysis analyze(Level level, {int maxStates = 100000}) {
-    final memo = <String, ({List<int> route, int cost})?>{};
-    var decisions = 0, losingChoices = 0;
-    ({List<int> route, int cost})? visit(Board board) {
-      if (board.phase(level) == GamePhase.won) return (route: <int>[], cost: 0);
-      if (board.phase(level) == GamePhase.failed) return null;
-      final key = board.searchKey;
-      if (memo.containsKey(key)) return memo[key];
-      if (memo.length >= maxStates) {
-        throw StateError('Puzzle analysis budget exhausted');
-      }
-      memo[key] = null;
-      ({List<int> route, int cost})? best;
-      var safe = 0, unsafe = 0;
-      for (int lane = 0; lane < board.lanes.length; lane++) {
-        final move = release(level, board, lane);
-        if (!move.accepted) continue;
-        final tail = visit(move.board);
-        if (tail == null) {
-          unsafe++;
-          continue;
-        }
-        safe++;
-        final cost = move.board.parked.length + tail.cost;
-        if (best == null || cost < best.cost) {
-          best = (route: [lane, ...tail.route], cost: cost);
-        }
-      }
-      if (safe > 0 && unsafe > 0) decisions++;
-      losingChoices += unsafe;
-      memo[key] = best;
-      return best;
-    }
-
-    final best = visit(Board.initial(level));
-    if (best == null) throw StateError('Unsolvable puzzle');
-    return RouteAnalysis(
-      List.unmodifiable(best.route),
-      best.cost,
-      memo.length,
-      decisions,
-      losingChoices,
-    );
-  }
-
-  static MoveResult release(Level level, Board board, int lane) {
+  /// Walks the passenger at [cell] to the stop. A matching passenger boards
+  /// the bus; anyone else takes the next free waiting slot. Full buses leave
+  /// and the next bus collects matching waiting passengers in arrival order.
+  static MoveResult tap(Level level, Board board, int cell) {
     if (board.phase(level) != GamePhase.playing ||
-        lane < 0 ||
-        lane >= board.lanes.length ||
-        board.lanes[lane].isEmpty ||
-        board.parked.length >= board.slots) {
+        cell < 0 ||
+        cell >= board.people.length ||
+        board.people[cell] < 0 ||
+        !board.reachable(level).contains(cell)) {
       return MoveResult(board);
     }
-    final lanes = board.lanes.map((l) => l.toList()).toList();
-    final parked = [...board.parked, lanes[lane].removeAt(0)];
-    var cursor = board.cursor;
-    final boarding = <Boarding>[];
-    final departed = <Bus>[];
-    while (cursor < level.passengers.length) {
-      final index = parked.indexWhere(
-        (b) => b.color == level.passengers[cursor],
-      );
-      if (index < 0) {
-        break;
-      }
-      final bus = parked[index].board();
-      boarding.add(Boarding(cursor, bus.id, bus.color));
-      cursor++;
-      if (bus.boarded == bus.capacity) {
-        departed.add(bus);
-        parked.removeAt(index);
-      } else {
-        parked[index] = bus;
+    final path = board.walk(level, cell);
+    final people = board.people.toList();
+    final color = BusColor.values[people[cell]];
+    people[cell] = -1;
+    var busIndex = board.busIndex, boarded = board.boarded;
+    final waiting = <(BusColor, int)>[
+      for (int i = 0; i < board.waiting.length; i++) (board.waiting[i], i),
+    ];
+    var toBus = false, slot = -1, departures = 0;
+    final fromWaiting = <int>[];
+    if (level.buses[busIndex] == color) {
+      boarded++;
+      toBus = true;
+    } else {
+      slot = waiting.length;
+      waiting.add((color, -1));
+    }
+    while (boarded == busCapacity) {
+      busIndex++;
+      boarded = 0;
+      departures++;
+      if (busIndex >= level.buses.length) break;
+      final next = level.buses[busIndex];
+      for (int i = 0; i < waiting.length && boarded < busCapacity;) {
+        if (waiting[i].$1 == next) {
+          fromWaiting.add(waiting[i].$2);
+          waiting.removeAt(i);
+          boarded++;
+        } else {
+          i++;
+        }
       }
     }
     final next = Board(
-      lanes: lanes,
-      parked: parked,
-      cursor: cursor,
-      departed: board.departed + departed.length,
+      people: people,
+      waiting: waiting.map((w) => w.$1).toList(),
+      busIndex: busIndex,
+      boarded: boarded,
       moves: board.moves + 1,
       slots: board.slots,
       continued: board.continued,
@@ -92,8 +58,12 @@ class GameEngine {
     return MoveResult(
       next,
       accepted: true,
-      boarding: List.unmodifiable(boarding),
-      departures: List.unmodifiable(departed),
+      cell: cell,
+      path: List.unmodifiable(path),
+      toBus: toBus,
+      waitingSlot: slot,
+      fromWaiting: List.unmodifiable(fromWaiting),
+      departures: departures,
     );
   }
 
@@ -102,61 +72,70 @@ class GameEngine {
       return b;
     }
     return Board(
-      lanes: b.lanes,
-      parked: b.parked,
-      cursor: b.cursor,
-      departed: b.departed,
+      people: b.people,
+      waiting: b.waiting,
+      busIndex: b.busIndex,
+      boarded: b.boarded,
       moves: b.moves,
       slots: b.slots + 1,
       continued: true,
     );
   }
 
-  /// Returns a genuine winning route from the current state, or null for a dead end.
-  /// Budget exhaustion never produces a fabricated hint.
-  static List<int>? solve(Level level, Board start, {int maxStates = 60000}) {
+  /// Returns a genuine winning route of cell taps from the current state, or
+  /// null for a dead end. Budget exhaustion never produces a fabricated hint.
+  /// The solver knows hidden colours; hints never reveal them directly.
+  static List<int>? solve(Level level, Board start, {int maxStates = 40000}) {
     final visited = <String>{};
     List<int>? visit(Board b) {
-      if (b.phase(level) == GamePhase.won) {
-        return [];
-      }
-      if (b.phase(level) == GamePhase.failed ||
+      final phase = b.phase(level);
+      if (phase == GamePhase.won) return [];
+      if (phase == GamePhase.failed ||
           visited.length >= maxStates ||
           !visited.add(b.searchKey)) {
         return null;
       }
-      final choices = List.generate(b.lanes.length, (i) => i);
-      choices.sort((a, c) {
-        final wanted = level.passengers[b.cursor];
-        final am = b.lanes[a].isNotEmpty && b.lanes[a].first.color == wanted;
-        final cm = b.lanes[c].isNotEmpty && b.lanes[c].first.color == wanted;
-        return (cm ? 1 : 0) - (am ? 1 : 0);
-      });
-      for (final lane in choices) {
-        final result = release(level, b, lane);
-        if (!result.accepted) {
-          continue;
+      final wanted = b.currentBus(level)!.index;
+      final choices = b.reachable(level).toList()..sort();
+      // Matching passengers first; one representative per waiting colour.
+      final matching = choices.where((i) => b.people[i] == wanted).toList();
+      final tried = <int>{};
+      final others = <int>[];
+      for (final i in choices) {
+        if (b.people[i] != wanted) others.add(i);
+      }
+      // Prefer passengers whose colour already waits or comes soon.
+      int soon(int i) {
+        for (int k = b.busIndex; k < level.buses.length; k++) {
+          if (level.buses[k].index == b.people[i]) return k - b.busIndex;
         }
+        return 99;
+      }
+
+      others.sort((a, c) => soon(a).compareTo(soon(c)));
+      for (final cell in [...matching, ...others]) {
+        if (!tried.add(cell)) continue;
+        final result = tap(level, b, cell);
+        if (!result.accepted) continue;
         final tail = visit(result.board);
-        if (tail != null) {
-          return [lane, ...tail];
-        }
+        if (tail != null) return [cell, ...tail];
       }
       return null;
     }
 
     return visit(start);
   }
-}
 
-class RouteAnalysis {
-  const RouteAnalysis(
-    this.route,
-    this.parkingCost,
-    this.states,
-    this.decisions,
-    this.losingChoices,
-  );
-  final List<int> route;
-  final int parkingCost, states, decisions, losingChoices;
+  /// Sum of waiting passengers after each move along [route].
+  static int waitingCost(Level level, List<int> route) {
+    var board = Board.initial(level);
+    var cost = 0;
+    for (final cell in route) {
+      final result = tap(level, board, cell);
+      if (!result.accepted) throw StateError('Blocked route');
+      board = result.board;
+      cost += board.waiting.length;
+    }
+    return cost;
+  }
 }

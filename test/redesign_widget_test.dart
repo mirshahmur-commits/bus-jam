@@ -13,23 +13,23 @@ void main() {
   setUpAll(() => UrbanAssets.instance.load());
 
   testWidgets(
-    'Rapid input releases three front buses while earlier buses are animating',
+    'Rapid taps send five passengers while earlier ones are still walking',
     (t) async {
       final c = await mount(t);
       c.level = trafficFixture();
       c.unlocked = 12;
       c.restart();
       await tap(t, 'play');
-      for (int expected = 1; expected <= 3; expected++) {
-        await t.tap(find.byKey(const ValueKey('lane-0')));
+      for (int i = 0; i < trafficFailure.length; i++) {
+        await t.tap(find.byKey(ValueKey('cell-${trafficFailure[i]}')));
         await t.pump(const Duration(milliseconds: 40));
-        expect(c.board.moves, expected);
+        expect(c.board.moves, i + 1);
       }
       expect(c.board.phase(c.level), GamePhase.failed);
       await t.pumpAndSettle();
       expect(find.byKey(const ValueKey('fail')), findsOneWidget);
       await tap(t, 'fail-undo');
-      expect(c.board.moves, 2);
+      expect(c.board.moves, 4);
       expect(c.coins, 150);
       expect(t.takeException(), isNull);
     },
@@ -76,7 +76,7 @@ void main() {
                     ),
                   )
                   .painter!
-              as BoardPainter;
+              as ArenaPainter;
       expect(painter.skin, 'metro');
       expect(painter.terminal, 'terminal-coast');
       await c.save();
@@ -88,40 +88,40 @@ void main() {
     },
   );
 
-  testWidgets(
-    'Queue preview reveals every remaining passenger and bus without a debit or move',
-    (t) async {
-      final c = await mount(t);
-      c.unlocked = 29;
-      c.openLevel(29);
-      await tap(t, 'play');
-      await tap(t, 'queue-preview');
-      expect(find.text('Plan your dispatch'), findsOneWidget);
-      expect(
-        find.byType(Chip),
-        findsNWidgets(c.level.passengers.length + c.level.busCount),
-      );
-      expect(c.coins, 150);
-      expect(c.board.moves, 0);
-      expect(t.takeException(), isNull);
-    },
-  );
+  testWidgets('Bus line-up shows every remaining bus without a debit or move', (
+    t,
+  ) async {
+    final c = await mount(t);
+    c.unlocked = 29;
+    c.openLevel(29);
+    await tap(t, 'play');
+    await tap(t, 'queue-preview');
+    expect(find.text('Bus line-up'), findsOneWidget);
+    expect(find.byType(Chip), findsNWidgets(c.level.busCount));
+    expect(c.coins, 150);
+    expect(c.board.moves, 0);
+    expect(t.takeException(), isNull);
+  });
 
   testWidgets(
     'Star result, personal record, replay and route map agree after real taps',
     (t) async {
       final c = await mount(t);
       await tap(t, 'play');
-      await tap(t, 'lane-1');
-      await tap(t, 'lane-0');
-      expect(find.text('1950'), findsOneWidget);
+      await tap(t, 'hint');
+      await tap(t, 'use-coins');
+      for (final cell in c.level.solution) {
+        await tap(t, 'cell-$cell');
+      }
+      expect(find.text('1850'), findsOneWidget);
       expect(c.routeRecord(1)!.stars, 2);
       await tap(t, 'replay');
-      await tap(t, 'lane-0');
-      await tap(t, 'lane-1');
+      for (final cell in c.level.solution) {
+        await tap(t, 'cell-$cell');
+      }
       expect(find.text('2000'), findsOneWidget);
       expect(c.routeRecord(1)!.stars, 3);
-      expect(c.coins, 175);
+      expect(c.coins, 150);
       await t.tap(find.text('Home').last);
       await t.pumpAndSettle();
       await tap(t, 'routes');

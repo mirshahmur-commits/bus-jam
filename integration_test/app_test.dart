@@ -38,7 +38,7 @@ void main() {
         await t.ensureVisible(f);
         await t.tap(f);
         await t.pumpAndSettle();
-        if (key.startsWith('lane-')) await waitForResult();
+        if (key.startsWith('cell-')) await waitForResult();
       }
 
       Future<void> shot(String name) async {
@@ -54,10 +54,10 @@ void main() {
       final c = controller();
       c.settings(sound: false, haptics: false);
       await shot('native-game');
-      // A second real tap is accepted before the first 440 ms departure ends.
+      // Each tap is accepted while earlier passengers are still walking.
       final route = GameEngine.solve(c.level, c.board)!;
-      for (final lane in route) {
-        final target = find.byKey(ValueKey('lane-$lane'));
+      for (final cell in route) {
+        final target = find.byKey(ValueKey('cell-$cell'));
         await t.ensureVisible(target);
         await t.tap(target);
         await t.pump(const Duration(milliseconds: 40));
@@ -72,8 +72,8 @@ void main() {
       expect(c.level.number, 2);
       await tap('hint');
       await tap('use-coins');
-      expect(c.hintLane, isNotNull);
-      await tap('lane-${c.hintLane}');
+      expect(c.hintCell, isNotNull);
+      await tap('cell-${c.hintCell}');
       await c.save();
       final saved = c.board.toJson();
       await app.main();
@@ -85,16 +85,17 @@ void main() {
       restored.unlocked = 12;
       restored.restart();
       await t.pumpAndSettle();
-      for (int i = 0; i < 3; i++) {
-        await tap('lane-0');
+      for (final cell in trafficFailure) {
+        await tap('cell-$cell');
       }
       expect(find.byKey(const ValueKey('fail')), findsOneWidget);
       await shot('native-fail');
       await tap('continue');
       await tap('use-coins');
-      expect(restored.board.slots, 4);
-      await tap('lane-0');
-      await tap('lane-1');
+      expect(restored.board.slots, 6);
+      for (final cell in [6, 7, 8, 5, 9, 10, 11]) {
+        await tap('cell-$cell');
+      }
       expect(find.byKey(const ValueKey('win')), findsOneWidget);
       restored.restart();
       await t.pumpAndSettle();
@@ -107,8 +108,8 @@ void main() {
       collector.openLevel(collector.unlocked);
       await t.pumpAndSettle();
       for (int number = 13; number <= 19; number++) {
-        for (final lane in collector.level.solution) {
-          await tap('lane-$lane');
+        for (final cell in collector.level.solution) {
+          await tap('cell-$cell');
         }
         expect(collector.lastResult!.stars, 3);
         if (number < 19) await tap('next');
@@ -123,16 +124,18 @@ void main() {
         alignment: .35,
       );
       await shot('native-garage');
+      final stars = collector.totalStars;
+      expect(stars, greaterThanOrEqualTo(21));
       await collector.save();
       await app.main();
       await t.pumpAndSettle();
       expect(controller().selectedBus, 'metro');
-      expect(controller().totalStars, 24);
+      expect(controller().totalStars, stars);
       await tap('routes');
       await shot('native-map');
       expect(t.takeException(), isNull);
       binding.reportData!.addAll({
-        'version': '1.1.0+2',
+        'version': '2.0.0+3',
         'journey': 'Passed',
         'nativePlatform': true,
         'sandboxPayments': 'Not run',

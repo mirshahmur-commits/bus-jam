@@ -1,9 +1,9 @@
 {
   "status": "Passed",
+  "generatorVersion": 3,
   "levels": 10000,
-  "witnessMoves": 149839,
+  "witnessMoves": 397119,
+  "levelsNeedingWaitingSlots": 9869,
   "independentSolverLevels": 300,
-  "generatorVersion": 1,
-  "elapsedMs": 8275,
-  "utc": "2026-10-06T16:25:55.492174Z"
+  "elapsedMs": 199822
 }

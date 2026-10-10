@@ -1,32 +1,35 @@
 # Bus Surge
 
-A Flutter/Dart color queue puzzle for iOS first, with Android and web sources.
-Approved urban game sprites, adult passengers, city artwork and bundled Nunito typography,
-overlapping boarding/departure motion, procedural sound, and an offline game engine.
+A Flutter/Dart crowd-to-bus puzzle for iOS first, with Android and web sources.
+Code-drawn toy buses and passengers on a lavender city stop, bundled Nunito
+typography, walking/boarding/departure motion, procedural sound and an offline
+game engine.
 
-Version 1.1 adds thirty authored planning puzzles, parking-efficiency scores,
-stars, personal records and a coin-funded cosmetic garage. See
-[redesign rules](docs/REDESIGN.md). Old saves retain their exact active board.
+Version 2.0 replaces the depot puzzle with the classic bus-jam loop: a crowd
+of passengers below, buses arriving one by one above and five waiting slots in
+between. See [crowd rules](docs/REDESIGN.md). Old saves keep coins, unlocked
+routes, collection and settings; the active board restarts as a crowd puzzle.
 
-<img src="docs/evidence/redesign/native-home.jpg" width="230" alt="Bus Surge home"> <img src="docs/evidence/redesign/native-game.jpg" width="230" alt="Bus Surge gameplay">
+<img src="docs/evidence/screens/02-gameplay.png" width="230" alt="Bus Surge gameplay"> <img src="docs/evidence/screens/02b-gameplay-progress.png" width="230" alt="Passengers boarding">
 
 ## Play
 
-Tap a **front bus** to send it into the boarding zone. Passengers board in FIFO
-order and only enter a bus with the same color/symbol. A full bus departs. You win
-when everyone has boarded and every bus has departed. A jam occurs when every
-parking slot is occupied and the first passenger cannot board.
+Tap a **passenger with a clear path** to the stop. If their colour matches the
+bus at the stop they board; otherwise they wait in one of the five slots. A
+full bus (three seats) leaves and the next one pulls in, collecting matching
+waiting passengers automatically. Board everyone to win. All five slots full
+means the stop is jammed.
 
-- Thirty authored routes followed by deterministic, validated combinations.
-- Immediate input during animation, hidden buses and different seat capacities.
-- Solver-based hints, one free undo per attempt, restart, and an extra-slot continue.
+- Deterministic, solver-verified crowds that grow from 3×3 to 7×6 with up to six colours.
+- Hidden **?** passengers reveal their colour once their path opens.
+- Input during animation; solver-based hints, one free undo, restart, extra-slot continue.
 - Exact mid-level saves and recovery from corrupt saves; serialized writes.
 - Coins: 150 at install, 25 on first completion of a route, 75 on first daily win.
-- Stars, parking-efficiency scores, personal records and dispatcher ranks.
+- Stars, waiting scores, personal records and dispatcher ranks.
 - Five bus liveries and four terminal styles; unlock with coins and equip in play.
-- Daily detours, consecutive-day streak, unlocked route map, replay protection.
+- Daily rush, consecutive-day streak, unlocked route map, replay protection.
 - Optional Game Center daily board; account setup and real-device checks are separate.
-- Sound/haptics/reduced-motion settings and color-independent passenger symbols.
+- Sound/haptics/reduced-motion settings and colour-independent symbols.
 - UMP-gated AdMob rewarded/interstitial adapters and verified StoreKit 2 Remove Ads.
 - Conservative ad cadence, optional HTTPS config, persistent local analytics journal.
 

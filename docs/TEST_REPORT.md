@@ -1,3 +1,12 @@
+# Bus Surge 2.0 validation (pending CI)
+
+Version `2.0.0+3` replaces the depot puzzle with the crowd-to-bus puzzle.
+Executed locally on Linux with Flutter 3.47.6 on 10 October 2026: formatting,
+`flutter analyze --fatal-infos`, 68 automated/business/widget tests, tool unit
+tests, 10,000 generated levels (`docs/evidence/generator.json`) and a release
+web build. GitHub Actions and native iPhone simulator UAT have not yet run for
+this source; `release-readiness.json` records them as Not run.
+
 # Bus Surge 1.1 validation
 
 Version `1.1.0+2` passed automated checks, business rules and native iPhone
