@@ -114,7 +114,10 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
     c.lifecycle(state.name);
     // Leaving the app pauses a live rush; it resumes from the pause menu.
     final run = c.rush;
-    if (state != AppLifecycleState.resumed &&
+    // Only a real trip to the background pauses; brief interruptions
+    // (inactive: notification centre, screenshots) do not.
+    if ((state == AppLifecycleState.paused ||
+            state == AppLifecycleState.hidden) &&
         page == 5 &&
         run != null &&
         !run.over &&

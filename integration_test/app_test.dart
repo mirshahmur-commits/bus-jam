@@ -144,21 +144,36 @@ void main() {
       }
       final rusher = controller();
       final run = rusher.rush!;
+      // Only matching passengers are sent, so the stop never jams here.
       for (int i = 0; i < 6 && !run.over; i++) {
-        var lane = run.lanes.indexWhere(
+        final lane = run.lanes.indexWhere(
           (l) => l.isNotEmpty && l.first == run.bus,
         );
-        if (lane < 0) lane = run.lanes.indexWhere((l) => l.isNotEmpty);
-        await t.tap(find.byKey(ValueKey('lane-$lane')));
+        if (lane >= 0) {
+          await t.tap(find.byKey(ValueKey('lane-$lane')));
+        }
         for (int f = 0; f < 20; f++) {
           await t.pump(const Duration(milliseconds: 16));
         }
       }
       expect(run.clock, greaterThan(0));
-      await shot('native-rush');
-      await t.tap(find.byKey(const ValueKey('rush-pause')));
-      await t.pumpAndSettle();
-      await t.tap(find.byKey(const ValueKey('rush-quit')));
+      // The crowd never settles, so capture without waiting for idleness.
+      await binding.takeScreenshot('native-rush');
+      if (run.over) {
+        await t.tap(find.byKey(const ValueKey('rush-home')));
+      } else {
+        final quit = find.byKey(const ValueKey('rush-quit'));
+        // Leaving the foreground (e.g. for a screenshot) may already have
+        // opened the pause menu.
+        if (quit.evaluate().isEmpty) {
+          await t.tap(find.byKey(const ValueKey('rush-pause')));
+        }
+        for (int f = 0; f < 40; f++) {
+          await t.pump(const Duration(milliseconds: 16));
+        }
+        await t.ensureVisible(quit);
+        await t.tap(quit);
+      }
       await t.pumpAndSettle();
       expect(rusher.rushRuns, 1);
       expect(rusher.bestScore, run.score);
