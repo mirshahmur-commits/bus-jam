@@ -1,3 +1,11 @@
+# Bus Surge 2.1 validation (pending CI)
+
+Version `2.1.0+4` adds the endless rush (continuous crowd, record score,
+boosters and upgrades). Executed locally on Linux with Flutter 3.47.6:
+formatting, `flutter analyze --fatal-infos` and 82 automated/business/widget
+tests including endless-engine seat-fairness fuzzing. GitHub Actions and
+native iPhone simulator UAT for this source are pending.
+
 # Bus Surge 2.0 validation (pending CI)
 
 Version `2.0.0+3` replaces the depot puzzle with the crowd-to-bus puzzle

@@ -133,9 +133,53 @@ void main() {
       expect(controller().totalStars, stars);
       await tap('routes');
       await shot('native-map');
+      // Endless rush: the crowd keeps walking, so pump frames, not settle.
+      await t.tap(find.text('Depot'));
+      await t.pumpAndSettle();
+      final rushButton = find.byKey(const ValueKey('rush'));
+      await t.ensureVisible(rushButton);
+      await t.tap(rushButton);
+      for (int i = 0; i < 60; i++) {
+        await t.pump(const Duration(milliseconds: 16));
+      }
+      final rusher = controller();
+      final run = rusher.rush!;
+      // Only matching passengers are sent, so the stop never jams here.
+      for (int i = 0; i < 6 && !run.over; i++) {
+        final lane = run.lanes.indexWhere(
+          (l) => l.isNotEmpty && l.first == run.bus,
+        );
+        if (lane >= 0) {
+          await t.tap(find.byKey(ValueKey('lane-$lane')));
+        }
+        for (int f = 0; f < 20; f++) {
+          await t.pump(const Duration(milliseconds: 16));
+        }
+      }
+      expect(run.clock, greaterThan(0));
+      // The crowd never settles, so capture without waiting for idleness.
+      await binding.takeScreenshot('native-rush');
+      if (run.over) {
+        await t.tap(find.byKey(const ValueKey('rush-home')));
+      } else {
+        final quit = find.byKey(const ValueKey('rush-quit'));
+        // Leaving the foreground (e.g. for a screenshot) may already have
+        // opened the pause menu.
+        if (quit.evaluate().isEmpty) {
+          await t.tap(find.byKey(const ValueKey('rush-pause')));
+        }
+        for (int f = 0; f < 40; f++) {
+          await t.pump(const Duration(milliseconds: 16));
+        }
+        await t.ensureVisible(quit);
+        await t.tap(quit);
+      }
+      await t.pumpAndSettle();
+      expect(rusher.rushRuns, 1);
+      expect(rusher.bestScore, run.score);
       expect(t.takeException(), isNull);
       binding.reportData!.addAll({
-        'version': '2.0.0+3',
+        'version': '2.1.0+4',
         'journey': 'Passed',
         'nativePlatform': true,
         'sandboxPayments': 'Not run',
@@ -143,6 +187,7 @@ void main() {
         'rapidInput': 'Passed',
         'collectionEarnBuyRestore': 'Passed',
         'starsAndRecords': 'Passed',
+        'endlessRush': 'Passed',
         'liveGameCenter': 'Not run',
       });
     },

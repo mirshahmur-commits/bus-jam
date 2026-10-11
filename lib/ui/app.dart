@@ -5,11 +5,54 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../game/controller.dart';
+import '../game/endless.dart';
 import '../game/model.dart';
 import '../game/progression.dart';
 import 'art.dart';
 import 'depot_preview.dart';
 import 'game_scene.dart';
+import 'rush_scene.dart';
+
+const boosterNames = {
+  Booster.rainbow: 'Rainbow',
+  Booster.slow: 'Slow-mo',
+  Booster.taxi: 'Taxi',
+};
+const boosterDescriptions = {
+  Booster.rainbow: 'For 30 seconds anyone boards any bus.',
+  Booster.slow: 'For 20 seconds the crowd arrives at half speed.',
+  Booster.taxi: 'A taxi takes everyone in the waiting slots.',
+};
+const boosterBlocked = {
+  Booster.rainbow: 'Rainbow is already running.',
+  Booster.slow: 'Slow-mo is already running.',
+  Booster.taxi: 'Nobody is waiting for a taxi.',
+};
+const boosterIcons = {
+  Booster.rainbow: Icons.auto_awesome_rounded,
+  Booster.slow: Icons.hourglass_bottom_rounded,
+  Booster.taxi: Icons.local_taxi_rounded,
+};
+const boosterColors = {
+  Booster.rainbow: [Color(0xFFFF8FD8), Color(0xFF9B4DE8)],
+  Booster.slow: [Color(0xFF7FD3FF), Color(0xFF2E7BE6)],
+  Booster.taxi: [Color(0xFFFFD45C), Color(0xFFF59E0B)],
+};
+const upgradeNames = {
+  Upgrade.bigBus: 'Bigger buses',
+  Upgrade.wideStop: 'Wider stop',
+  Upgrade.calmCrowd: 'Calm crowd',
+};
+const upgradeDescriptions = {
+  Upgrade.bigBus: 'One more seat on every rush bus.',
+  Upgrade.wideStop: 'One more waiting slot in every rush.',
+  Upgrade.calmCrowd: 'The crowd starts a little slower.',
+};
+const upgradeIcons = {
+  Upgrade.bigBus: Icons.airport_shuttle_rounded,
+  Upgrade.wideStop: Icons.chair_rounded,
+  Upgrade.calmCrowd: Icons.self_improvement_rounded,
+};
 
 class BusJamApp extends StatefulWidget {
   const BusJamApp({
@@ -67,8 +110,23 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) =>
-      c.lifecycle(state.name);
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    c.lifecycle(state.name);
+    // Leaving the app pauses a live rush; it resumes from the pause menu.
+    final run = c.rush;
+    // Only a real trip to the background pauses; brief interruptions
+    // (inactive: notification centre, screenshots) do not.
+    if ((state == AppLifecycleState.paused ||
+            state == AppLifecycleState.hidden) &&
+        page == 5 &&
+        run != null &&
+        !run.over &&
+        !rushPaused) {
+      final context = navigator.currentContext;
+      if (context != null) unawaited(pauseRush(() => rushMenu(context)));
+    }
+  }
+
   @override
   void dispose() {
     c.removeListener(changed);
@@ -120,6 +178,7 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
     if (c.busy) {
       return;
     }
+    if (page == 5) c.settleRush();
     c.returnToCampaign();
     setState(() => page = 0);
   }
@@ -158,7 +217,7 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
           }
         },
         child: Scaffold(
-          bottomNavigationBar: page == 1
+          bottomNavigationBar: page == 1 || page == 5
               ? null
               : NavigationBar(
                   selectedIndex: page == 0 ? 0 : page - 1,
@@ -190,10 +249,10 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
                 ),
           body: Container(
             decoration: BoxDecoration(
-              color: page == 1
+              color: page == 1 || page == 5
                   ? ArenaPalette.forId(c.selectedTerminal).sky
                   : null,
-              gradient: page == 1
+              gradient: page == 1 || page == 5
                   ? null
                   : const LinearGradient(
                       begin: Alignment.topCenter,
@@ -218,6 +277,8 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
                                   ? levelsPage(context)
                                   : page == 3
                                   ? garagePage(context)
+                                  : page == 5
+                                  ? rushPage(context)
                                   : recordsPage(context),
                             ),
                             if (c.busy)
@@ -392,50 +453,73 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
               ),
             ),
             Text(
-              '${c.totalStars} ★',
+              '${c.totalStars}',
               style: const TextStyle(
                 fontWeight: FontWeight.w900,
                 color: Color(0xFFAE7D28),
               ),
             ),
+            const Icon(Icons.star_rounded, size: 18, color: Color(0xFFE2AD3C)),
           ],
         ),
         const SizedBox(height: 7),
-        const Text(
-          'Clear the crowd.\nFill every bus.',
-          style: TextStyle(
-            fontSize: 31,
-            fontWeight: FontWeight.w900,
-            height: 1.08,
-            letterSpacing: -.8,
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF8E8AD6), Color(0xFF5B4FD6)],
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'ENDLESS RUSH',
+                style: TextStyle(
+                  color: Color(0xFFFFE07A),
+                  fontSize: 13,
+                  letterSpacing: 1.6,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'The crowd never stops.\nHow long can you last?',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  height: 1.15,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                c.bestScore > 0
+                    ? 'Your record: ${c.bestScore}'
+                    : 'Set your first record',
+                key: const ValueKey('best-score'),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 12),
+              primary(
+                'Rush',
+                startRush,
+                key: const ValueKey('rush'),
+                icon: Icons.bolt_rounded,
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            Chip(
-              avatar: const Icon(Icons.chair_rounded, size: 16),
-              label: Text('${c.level.slots} waiting slots'),
-              visualDensity: VisualDensity.compact,
-            ),
-            Chip(
-              avatar: const Icon(Icons.directions_bus_rounded, size: 16),
-              label: Text('${c.level.busCount} buses'),
-              visualDensity: VisualDensity.compact,
-            ),
-            if (c.level.hard)
-              const Chip(
-                avatar: Icon(Icons.local_fire_department_rounded, size: 16),
-                label: Text('Hard route'),
-                visualDensity: VisualDensity.compact,
-              ),
-          ],
-        ),
-        const SizedBox(height: 16),
         primary(
-          'Play · Level ${c.board.phase(c.level) == GamePhase.won ? c.unlocked : c.level.number}',
+          'Puzzle · Level ${c.board.phase(c.level) == GamePhase.won ? c.unlocked : c.level.number}',
           () {
             if (c.dailyMode) c.returnToCampaign();
             if (c.board.phase(c.level) == GamePhase.won) {
@@ -848,6 +932,413 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
     );
   }
 
+  final rushKey = GlobalKey<RushSceneState>();
+  bool rushPaused = false;
+
+  void startRush() {
+    c.startRush();
+    setState(() {
+      rushPaused = false;
+      page = 5;
+    });
+  }
+
+  void onRushMove(RushMove move) {
+    if (c.haptics) {
+      unawaited(HapticFeedback.lightImpact());
+    }
+    final run = c.rush!;
+    if (run.over && run.end == RushEnd.overflow) c.settleRush();
+    if (c.sound && widget.audioEnabled) {
+      final sound = run.over
+          ? 'fail'
+          : move.toBus || move.fromWaiting.isNotEmpty
+          ? 'board'
+          : 'tap';
+      unawaited(
+        audio!.play(AssetSource('audio/$sound.wav')).catchError((Object e) {}),
+      );
+    }
+  }
+
+  Future<void> pauseRush(Future<void> Function() action) async {
+    setState(() => rushPaused = true);
+    await action();
+    if (mounted) setState(() => rushPaused = false);
+  }
+
+  void useBooster(Booster b) {
+    final run = c.rush;
+    if (run == null) return;
+    if ((c.boosters[b] ?? 0) < 1) {
+      if (!c.buyBooster(b)) {
+        messenger.currentState?.showSnackBar(
+          SnackBar(
+            content: Text(
+              'Not enough coins. ${boosterNames[b]} costs ${boosterPrices[b]}.',
+            ),
+          ),
+        );
+        return;
+      }
+    }
+    final waitingBefore = run.waiting.toList();
+    final serial = run.busesSent;
+    final move = c.useBooster(b);
+    if (move == null) {
+      messenger.currentState?.showSnackBar(
+        SnackBar(content: Text(boosterBlocked[b]!)),
+      );
+      return;
+    }
+    rushKey.currentState?.boosted(move, waitingBefore, serial);
+  }
+
+  Widget boosterButton(Booster b, EndlessRun run) {
+    final active = switch (b) {
+      Booster.rainbow => run.rainbow,
+      Booster.slow => run.slow,
+      Booster.taxi => false,
+    };
+    final left = switch (b) {
+      Booster.rainbow => (run.rainbowUntil - run.clock) ~/ 1000 + 1,
+      Booster.slow => (run.slowUntil - run.clock) ~/ 1000 + 1,
+      Booster.taxi => 0,
+    };
+    final owned = c.boosters[b] ?? 0;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        hudButton(
+          boosterIcons[b]!,
+          run.over && b != Booster.taxi || active ? null : () => useBooster(b),
+          tip: boosterNames[b]!,
+          key: ValueKey('booster-${b.name}'),
+          size: 54,
+          colors: boosterColors[b]!,
+          badge: active
+              ? '${left}s'
+              : owned > 0
+              ? '×$owned'
+              : '${boosterPrices[b]}',
+        ),
+        Text(
+          boosterNames[b]!,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 11,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget rushPage(BuildContext context) {
+    final run = c.rush;
+    if (run == null) return const SizedBox.shrink();
+    const top = 58.0;
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: RushScene(
+            key: rushKey,
+            controller: c,
+            top: top,
+            paused: rushPaused || page != 5,
+            onMove: onRushMove,
+            onLockTap: () {
+              if (!c.rushContinue()) {
+                messenger.currentState?.showSnackBar(
+                  const SnackBar(
+                    content: Text('An extra slot costs 50 coins.'),
+                  ),
+                );
+              }
+            },
+          ),
+        ),
+        Positioned(
+          left: 10,
+          right: 10,
+          top: 8,
+          child: Row(
+            children: [
+              hudButton(
+                Icons.pause_rounded,
+                () => pauseRush(() => rushMenu(context)),
+                tip: 'Pause',
+                key: const ValueKey('rush-pause'),
+                size: 40,
+                colors: const [Color(0xFF7C76E0), Color(0xFF524BC0)],
+              ),
+              hudPill(
+                const Icon(
+                  Icons.monetization_on_rounded,
+                  color: Color(0xFFFFC93C),
+                  size: 30,
+                ),
+                '${c.coins}',
+              ),
+              Expanded(
+                child: Center(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '${run.score}',
+                          key: const ValueKey('rush-score'),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 30,
+                            height: 1,
+                            fontWeight: FontWeight.w900,
+                            shadows: [
+                              Shadow(
+                                color: Color(0xFF3B3680),
+                                offset: Offset(0, 2.5),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text(
+                          run.score > c.bestScore && c.bestScore > 0
+                              ? 'NEW BEST!'
+                              : 'BEST ${c.bestScore}',
+                          style: const TextStyle(
+                            color: Color(0xFFFFE07A),
+                            fontSize: 11,
+                            letterSpacing: 1,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              hudPill(
+                const Padding(
+                  padding: EdgeInsets.only(left: 8),
+                  child: Icon(
+                    Icons.directions_bus_rounded,
+                    color: Color(0xFFFFC93C),
+                    size: 20,
+                  ),
+                ),
+                '${run.busesSent}',
+              ),
+            ],
+          ),
+        ),
+        if (run.streak >= 3)
+          Positioned(
+            right: 12,
+            top: top + 10,
+            child: IgnorePointer(
+              child: Text(
+                'COMBO ×${run.streak}',
+                style: const TextStyle(
+                  color: Color(0xFFFFE07A),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  shadows: [
+                    Shadow(color: Color(0xFF3B3680), offset: Offset(0, 2)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  const Color(0xFF3B3680).withValues(alpha: 0),
+                  const Color(0xFF3B3680).withValues(alpha: .8),
+                ],
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(0, 22, 0, 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  for (final b in Booster.values) boosterButton(b, run),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (run.over) rushOverlay(context, run),
+      ],
+    );
+  }
+
+  Future<void> rushMenu(BuildContext context) => sheet(
+    context,
+    Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Paused',
+          style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
+        ),
+        const SizedBox(height: 8),
+        Text('Score ${c.rush?.score ?? 0} · Best ${c.bestScore}'),
+        const SizedBox(height: 18),
+        primary('Resume', () {
+          navigator.currentState!.pop();
+        }, key: const ValueKey('rush-resume')),
+        TextButton(
+          key: const ValueKey('rush-quit'),
+          onPressed: () {
+            navigator.currentState!.pop();
+            c.settleRush();
+            setState(() => page = 0);
+          },
+          child: const Text('End run and go home'),
+        ),
+        TextButton(
+          onPressed: () {
+            navigator.currentState!.pop();
+            settings(context);
+          },
+          child: const Text('Settings'),
+        ),
+      ],
+    ),
+  );
+
+  Widget rushOverlay(BuildContext context, EndlessRun run) {
+    final canContinue =
+        !c.rushSettled && run.end == RushEnd.slotsFull && run.extraSlots == 0;
+    final canTaxi =
+        !c.rushSettled &&
+        run.end == RushEnd.slotsFull &&
+        (c.boosters[Booster.taxi] ?? 0) > 0;
+    return Positioned.fill(
+      child: ColoredBox(
+        color: const Color(0xFF2A2660).withValues(alpha: .55),
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(25),
+            child: card(
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    height: 90,
+                    width: double.infinity,
+                    child: CustomPaint(painter: ResultArtPainter(false)),
+                  ),
+                  Text(
+                    run.end == RushEnd.overflow
+                        ? 'Crowd overflow!'
+                        : 'Stop jammed!',
+                    key: const ValueKey('rush-over'),
+                    style: const TextStyle(
+                      fontSize: 27,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '${run.score}',
+                    key: const ValueKey('rush-final'),
+                    style: const TextStyle(
+                      fontSize: 44,
+                      fontWeight: FontWeight.w900,
+                      color: teal,
+                    ),
+                  ),
+                  Text(
+                    c.rushSettled
+                        ? c.rushNewBest
+                              ? 'NEW PERSONAL BEST!'
+                              : 'BEST ${c.bestScore}'
+                        : run.score > c.bestScore
+                        ? 'NEW BEST — KEEP GOING?'
+                        : 'BEST ${c.bestScore}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      letterSpacing: 1.3,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: [
+                      pill(Icons.people_alt_rounded, '${run.delivered}'),
+                      pill(Icons.directions_bus_rounded, '${run.busesSent}'),
+                      pill(
+                        Icons.monetization_on_rounded,
+                        '+${c.rushSettled ? c.rushReward : run.coins}',
+                        color: const Color(0xFFAB7A25),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  if (canTaxi)
+                    TextButton.icon(
+                      key: const ValueKey('rush-taxi'),
+                      onPressed: () => useBooster(Booster.taxi),
+                      icon: const Icon(Icons.local_taxi_rounded),
+                      label: Text(
+                        'Call a taxi for the waiting · ×${c.boosters[Booster.taxi]}',
+                      ),
+                    ),
+                  if (canContinue)
+                    TextButton.icon(
+                      key: const ValueKey('rush-continue'),
+                      onPressed: c.coins >= 50 ? c.rushContinue : null,
+                      icon: const Icon(Icons.add_box_rounded),
+                      label: const Text('Extra slot and continue · 50 coins'),
+                    ),
+                  primary(
+                    'Play again',
+                    () {
+                      c.settleRush();
+                      startRush();
+                    },
+                    key: const ValueKey('rush-again'),
+                    icon: Icons.replay_rounded,
+                  ),
+                  TextButton(
+                    key: const ValueKey('rush-shop'),
+                    onPressed: () {
+                      c.settleRush();
+                      setState(() => page = 3);
+                    },
+                    child: const Text('Upgrades and boosters'),
+                  ),
+                  TextButton(
+                    key: const ValueKey('rush-home'),
+                    onPressed: () {
+                      c.settleRush();
+                      setState(() => page = 0);
+                    },
+                    child: const Text('Home'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> previewQueue(BuildContext context) => sheet(
     context,
     Column(
@@ -1195,6 +1686,105 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
       ),
     ],
   );
+  Widget shopHeading(String text) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Text(
+      text,
+      style: const TextStyle(
+        fontWeight: FontWeight.w900,
+        fontSize: 12,
+        letterSpacing: 1.5,
+        color: teal,
+      ),
+    ),
+  );
+
+  Widget shopRow({
+    required IconData icon,
+    required List<Color> colors,
+    required String title,
+    required String subtitle,
+    required String action,
+    required VoidCallback? onTap,
+    required Key key,
+  }) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: card(
+      Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(colors: colors),
+            ),
+            child: Icon(icon, color: Colors.white),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 16,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF687789),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          FilledButton(
+            key: key,
+            onPressed: onTap,
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF34C46F),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+            ),
+            child: Text(
+              action,
+              style: const TextStyle(fontWeight: FontWeight.w900),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  Widget upgradeCard(Upgrade u) {
+    final level = c.upgrades[u] ?? 0;
+    final price = upgradePrice(u, level);
+    return shopRow(
+      icon: upgradeIcons[u]!,
+      colors: const [Color(0xFF6EE7A8), Color(0xFF22B573)],
+      title: '${upgradeNames[u]} · $level/${upgradeMax(u)}',
+      subtitle: upgradeDescriptions[u]!,
+      action: price == null ? 'MAX' : '$price',
+      onTap: price == null || c.coins < price ? null : () => c.buyUpgrade(u),
+      key: ValueKey('upgrade-${u.name}'),
+    );
+  }
+
+  Widget boosterCard(Booster b) => shopRow(
+    icon: boosterIcons[b]!,
+    colors: boosterColors[b]!,
+    title: '${boosterNames[b]} · ×${c.boosters[b] ?? 0}',
+    subtitle: boosterDescriptions[b]!,
+    action: '${boosterPrices[b]}',
+    onTap: c.coins < boosterPrices[b]! ? null : () => c.buyBooster(b),
+    key: ValueKey('buy-${b.name}'),
+  );
+
   Widget garagePage(BuildContext context) => SingleChildScrollView(
     key: const ValueKey('garage'),
     padding: const EdgeInsets.all(22),
@@ -1225,10 +1815,16 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
         ),
         const SizedBox(height: 10),
         const Text(
-          'Earn coins on routes. Make your fleet your own.',
+          'Earn coins in rushes and puzzles. Spend them here.',
           style: TextStyle(color: Color(0xFF687789)),
         ),
         const SizedBox(height: 17),
+        shopHeading('RUSH UPGRADES'),
+        for (final u in Upgrade.values) upgradeCard(u),
+        const SizedBox(height: 10),
+        shopHeading('BOOSTERS'),
+        for (final b in Booster.values) boosterCard(b),
+        const SizedBox(height: 10),
         for (final kind in CosmeticKind.values) ...[
           Text(
             kind == CosmeticKind.bus ? 'THE FLEET' : 'YOUR TERMINAL',
@@ -1746,7 +2342,7 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
             ),
             const SizedBox(height: 14),
             const Text(
-              'BUS SURGE  /  2.0.0\nYour city. Your next move.',
+              'BUS SURGE  /  2.1.0\nYour city. Your next move.',
               style: TextStyle(
                 color: Color(0xFF8E9B8E),
                 fontSize: 11,

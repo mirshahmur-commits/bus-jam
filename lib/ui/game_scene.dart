@@ -7,13 +7,51 @@ import '../game/controller.dart';
 import '../game/model.dart';
 import 'art.dart';
 
+/// What the arena shows: shared by puzzle levels and the endless rush.
+class ArenaView {
+  const ArenaView({
+    required this.lanes,
+    required this.waiting,
+    required this.slots,
+    required this.current,
+    required this.boarded,
+    required this.busSerial,
+    this.next,
+    this.capacity = busCapacity,
+    this.continued = false,
+    this.lockOpen = true,
+    this.playing = true,
+    this.hint,
+    this.rainbow = false,
+    this.skin = 'classic',
+    this.terminal = 'terminal-classic',
+  });
+
+  /// Passenger colours per lane, front first; -1 marks a hidden passenger.
+  final List<List<int>> lanes;
+  final List<BusColor> waiting;
+  final int slots, boarded, capacity;
+
+  /// Running number of the bus at the stop, for motion bookkeeping.
+  final int busSerial;
+  final BusColor? current, next;
+  final bool continued, lockOpen, playing, rainbow;
+  final int? hint;
+  final String skin, terminal;
+}
+
 /// Geometry of the arena: road with buses, the stop with waiting slots,
 /// then the crowd corridor that streams off the bottom of the screen.
 class SceneLayout {
-  SceneLayout(this.size, this.level, this.slots, {this.top = 0});
+  SceneLayout(
+    this.size,
+    this.laneCount,
+    this.slots, {
+    this.top = 0,
+    this.capacity = busCapacity,
+  });
   final Size size;
-  final Level level;
-  final int slots;
+  final int laneCount, slots, capacity;
 
   /// Space reserved for the HUD above the road.
   final double top;
@@ -21,8 +59,9 @@ class SceneLayout {
   double get roadTop => top;
   double get roadBottom => roadTop + roadH;
   Rect get busRect {
-    final w = min(size.width * .56, roadH * 1.75);
-    final h = w * .55;
+    final grow = 1 + (capacity - busCapacity) * .1;
+    final w = min(size.width * .56 * grow, roadH * 1.75 * grow);
+    final h = min(w, roadH * 1.75) * .55;
     return Rect.fromLTWH(
       size.width * .53 - w * .5,
       roadBottom - h - roadH * .06,
@@ -36,8 +75,10 @@ class SceneLayout {
       busRect.shift(Offset(-busRect.left - busRect.width * .62, 0));
   Rect get goneBus => busRect.shift(Offset(size.width - busRect.left + 30, 0));
   Offset seat(Rect bus, int seat) => Offset(
-    bus.left + bus.width * (.34 + seat * .22),
-    bus.top + bus.height * .74,
+    bus.left +
+        bus.width *
+            (coachSeat(seat, capacity) + coachSeatWidth(capacity) * .55),
+    bus.top + bus.height * .8,
   );
   Offset get door => Offset(busRect.left + busRect.width * .5, roadBottom + 4);
   double get slotSize =>
@@ -64,11 +105,11 @@ class SceneLayout {
     return Offset(r.center.dx, r.bottom - r.height * .1);
   }
 
-  double get laneW => min(72, (size.width - 48) / level.lanes.length);
+  double get laneW => min(72, (size.width - 48) / laneCount);
   double get rowH => laneW * .6;
   double get corridorTop => stopTop + stopH;
   Rect get corridor {
-    final w = laneW * level.lanes.length + 16;
+    final w = laneW * laneCount + 16;
     return Rect.fromLTRB(
       size.width / 2 - w / 2,
       corridorTop - 2,
@@ -129,8 +170,9 @@ class SceneWalker {
 }
 
 class SceneDeparture {
-  SceneDeparture(this.bus, this.start);
+  SceneDeparture(this.bus, this.color, this.start);
   final int bus, start;
+  final BusColor color;
 }
 
 /// Remaining waiting passengers slide left once others have boarded.
@@ -138,6 +180,128 @@ class SlotShift {
   SlotShift(this.from, this.start);
   final Map<int, int> from;
   final int start;
+}
+
+/// Motion state shared by the puzzle and rush scenes. Motion is purely
+/// cosmetic: the rules have already moved on when it starts.
+class SceneMotion {
+  static const busTravel = 480, step = 230, arrive = 420;
+  final walkers = <SceneWalker>[];
+  final departures = <SceneDeparture>[];
+  final laneSteps = <int, int>{};
+  final arrivals = <int, int>{};
+  SlotShift? shift;
+  int arrival = -100000;
+  bool get idle =>
+      walkers.isEmpty &&
+      departures.isEmpty &&
+      laneSteps.isEmpty &&
+      arrivals.isEmpty &&
+      shift == null;
+  void clear() {
+    walkers.clear();
+    departures.clear();
+    laneSteps.clear();
+    arrivals.clear();
+    shift = null;
+    arrival = -100000;
+  }
+
+  /// Drops finished motion; returns true while anything still moves.
+  bool prune(int t) {
+    walkers.removeWhere((w) => w.done(t));
+    departures.removeWhere((d) => t > d.start + busTravel);
+    laneSteps.removeWhere((_, s) => t > s + step);
+    arrivals.removeWhere((_, s) => t > s + arrive);
+    if (shift != null && t > shift!.start + step) shift = null;
+    return !idle || t <= arrival + busTravel;
+  }
+
+  /// Animates a passenger leaving [lane] for the bus or a waiting slot,
+  /// then any departures and waiting passengers hopping on afterwards.
+  void move({
+    required SceneLayout scene,
+    required int now,
+    required int lane,
+    required BusColor color,
+    required bool toBus,
+    required int seat,
+    required int slot,
+    required int busSerial,
+    required List<BusColor> waitingBefore,
+    required List<int> fromWaiting,
+    required List<BusColor> departed,
+  }) {
+    final t = now;
+    final path = <Offset>[];
+    if (lane >= 0) {
+      final start = scene.person(lane, 0);
+      path.addAll([
+        start,
+        Offset(start.dx, scene.corridorTop + scene.rowH * .2),
+        scene.exit,
+      ]);
+      laneSteps[lane] = t;
+    }
+    var walk = 0;
+    if (path.isNotEmpty) {
+      if (toBus) {
+        path.addAll([scene.door, scene.seat(scene.busRect, seat)]);
+      } else {
+        path.add(scene.slotFeet(slot));
+      }
+      var length = 0.0;
+      for (int i = 1; i < path.length; i++) {
+        length += (path[i] - path[i - 1]).distance;
+      }
+      walk = (length * 1.6).clamp(260.0, 700.0).round();
+      walkers.add(
+        SceneWalker(
+          path,
+          color,
+          t,
+          walk,
+          bus: toBus ? busSerial : -1,
+          seat: seat,
+          slot: slot,
+        ),
+      );
+    }
+    var serial = busSerial;
+    var landed = t;
+    if (departed.isNotEmpty) {
+      final leave = t + walk + 60;
+      departures.add(SceneDeparture(busSerial, departed.first, leave));
+      serial += departed.length;
+      arrival = leave + 140;
+      landed = arrival + busTravel;
+    }
+    // Waiting passengers board by themselves once their bus is at the stop.
+    for (int k = 0; k < fromWaiting.length; k++) {
+      final from = fromWaiting[k];
+      final s = min(k, scene.capacity - 1);
+      walkers.add(
+        SceneWalker(
+          [scene.slotFeet(from), scene.door, scene.seat(scene.busRect, s)],
+          waitingBefore[from],
+          landed + k * 110,
+          360,
+          bus: serial,
+          seat: s,
+          fromSlot: from,
+        ),
+      );
+    }
+    if (fromWaiting.isNotEmpty) {
+      final kept = [
+        for (int i = 0; i < waitingBefore.length; i++)
+          if (!fromWaiting.contains(i)) i,
+      ];
+      shift = SlotShift({
+        for (int k = 0; k < kept.length; k++) k: kept[k],
+      }, landed + fromWaiting.length * 110 + 200);
+    }
+  }
 }
 
 class GameScene extends StatefulWidget {
@@ -164,18 +328,12 @@ class GameScene extends StatefulWidget {
 
 class _GameSceneState extends State<GameScene>
     with SingleTickerProviderStateMixin {
-  static const busTravel = 480, step = 230;
   late final Ticker ticker;
   // Scene time advances with frames so tests and devices share one clock.
   int _base = 0, _now = 0;
-  final walkers = <SceneWalker>[];
-  final departures = <SceneDeparture>[];
-  final laneSteps = <int, int>{};
-  SlotShift? shift;
-  int arrival = -100000;
+  final motion = SceneMotion();
   late Board observed;
   GameController get c => widget.controller;
-  int get now => _now;
 
   @override
   void initState() {
@@ -183,16 +341,7 @@ class _GameSceneState extends State<GameScene>
     observed = c.board;
     ticker = createTicker((elapsed) {
       _now = _base + elapsed.inMilliseconds;
-      final t = now;
-      walkers.removeWhere((w) => w.done(t));
-      departures.removeWhere((d) => t > d.start + busTravel);
-      laneSteps.removeWhere((_, s) => t > s + step);
-      if (shift != null && t > shift!.start + step) shift = null;
-      if (walkers.isEmpty &&
-          departures.isEmpty &&
-          laneSteps.isEmpty &&
-          shift == null &&
-          t > arrival + busTravel) {
+      if (!motion.prune(_now)) {
         ticker.stop();
         _base = _now;
         widget.onIdle?.call();
@@ -205,11 +354,7 @@ class _GameSceneState extends State<GameScene>
     // Undo, restart and level changes replace the board without a tap.
     if (!identical(observed, c.board)) {
       observed = c.board;
-      walkers.clear();
-      departures.clear();
-      laneSteps.clear();
-      shift = null;
-      arrival = -100000;
+      motion.clear();
     }
   }
 
@@ -224,138 +369,74 @@ class _GameSceneState extends State<GameScene>
     final result = c.tap(lane);
     if (!result.accepted) return;
     observed = c.board;
-    if (!c.reducedMotion) _animate(before, result, scene);
+    if (!c.reducedMotion) {
+      motion.move(
+        scene: scene,
+        now: _now,
+        lane: result.lane,
+        color: result.color!,
+        toBus: result.toBus,
+        seat: result.seat,
+        slot: result.waitingSlot,
+        busSerial: before.busIndex,
+        waitingBefore: before.waiting,
+        fromWaiting: result.fromWaiting,
+        departed: [
+          for (int k = 0; k < result.departures; k++)
+            c.level.buses[before.busIndex + k],
+        ],
+      );
+      if (!ticker.isActive) ticker.start();
+    }
     widget.onMove(result);
     setState(() {});
   }
 
-  void _animate(Board before, MoveResult result, SceneLayout scene) {
-    final t = now;
-    final start = scene.person(result.lane, 0);
-    final path = [
-      start,
-      Offset(start.dx, scene.corridorTop + scene.rowH * .2),
-      scene.exit,
-    ];
-    if (result.toBus) {
-      path.addAll([scene.door, scene.seat(scene.busRect, result.seat)]);
-    } else {
-      path.add(scene.slotFeet(result.waitingSlot));
-    }
-    var length = 0.0;
-    for (int i = 1; i < path.length; i++) {
-      length += (path[i] - path[i - 1]).distance;
-    }
-    final walk = (length * 1.6).clamp(260.0, 700.0).round();
-    laneSteps[result.lane] = t;
-    walkers.add(
-      SceneWalker(
-        path,
-        result.color!,
-        t,
-        walk,
-        bus: result.toBus ? before.busIndex : -1,
-        seat: result.seat,
-        slot: result.waitingSlot,
-      ),
+  ArenaView get view {
+    final l = c.level, b = c.board;
+    return ArenaView(
+      lanes: [
+        for (int lane = 0; lane < l.lanes.length; lane++)
+          [
+            for (int d = b.taken[lane]; d < l.lanes[lane].length; d++)
+              d > b.taken[lane] && l.isHidden(lane, d) ? -1 : l.lanes[lane][d],
+          ],
+      ],
+      waiting: b.waiting,
+      slots: b.slots,
+      current: b.currentBus(l),
+      next: b.busIndex + 1 < l.buses.length ? l.buses[b.busIndex + 1] : null,
+      boarded: b.boarded,
+      busSerial: b.busIndex,
+      continued: b.continued,
+      lockOpen: !b.continued,
+      playing: b.phase(l) == GamePhase.playing,
+      hint: c.hintLane,
+      skin: c.selectedBus,
+      terminal: c.selectedTerminal,
     );
-    if (result.departures > 0) {
-      final leave = t + walk + 60;
-      departures.add(SceneDeparture(before.busIndex, leave));
-      arrival = leave + 140;
-      final next = result.board;
-      // Waiting passengers board by themselves once their bus has pulled in.
-      final landed = arrival + busTravel;
-      for (int k = 0; k < result.fromWaiting.length; k++) {
-        final slot = result.fromWaiting[k];
-        final seat = min(k, busCapacity - 1);
-        walkers.add(
-          SceneWalker(
-            [scene.slotFeet(slot), scene.door, scene.seat(scene.busRect, seat)],
-            before.waiting[slot],
-            landed + k * 110,
-            360,
-            bus: next.busIndex,
-            seat: seat,
-            fromSlot: slot,
-          ),
-        );
-      }
-      if (result.fromWaiting.isNotEmpty) {
-        final kept = [
-          for (int i = 0; i < before.waiting.length; i++)
-            if (!result.fromWaiting.contains(i)) i,
-        ];
-        shift = SlotShift({
-          for (int k = 0; k < kept.length; k++) k: kept[k],
-        }, landed + result.fromWaiting.length * 110 + 200);
-      }
-    }
-    if (!ticker.isActive) ticker.start();
   }
 
   @override
   Widget build(BuildContext context) {
     _sync();
+    final v = view;
     return LayoutBuilder(
       builder: (context, box) {
         final scene = SceneLayout(
           box.biggest,
-          c.level,
-          c.board.slots,
+          v.lanes.length,
+          v.slots,
           top: widget.top,
         );
-        final playing = c.board.phase(c.level) == GamePhase.playing;
-        return Stack(
-          children: [
-            Positioned.fill(
-              child: RepaintBoundary(
-                child: CustomPaint(
-                  painter: ArenaPainter(
-                    scene: scene,
-                    level: c.level,
-                    board: c.board,
-                    hint: c.hintLane,
-                    walkers: walkers,
-                    departures: departures,
-                    laneSteps: laneSteps,
-                    shift: shift,
-                    arrival: arrival,
-                    now: now,
-                    skin: c.selectedBus,
-                    terminal: c.selectedTerminal,
-                    lockOpen: !c.board.continued,
-                  ),
-                ),
-              ),
-            ),
-            for (int lane = 0; lane < c.level.lanes.length; lane++)
-              Positioned.fromRect(
-                rect: scene.laneRect(lane),
-                child: Semantics(
-                  button: playing && c.board.open(c.level, lane),
-                  label: _laneLabel(lane),
-                  child: GestureDetector(
-                    key: ValueKey('lane-$lane'),
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => onTap(lane, scene),
-                  ),
-                ),
-              ),
-            if (!c.board.continued)
-              Positioned.fromRect(
-                rect: scene.lockTile,
-                child: Semantics(
-                  button: true,
-                  label: 'Unlock an extra waiting slot',
-                  child: GestureDetector(
-                    key: const ValueKey('lock-slot'),
-                    behavior: HitTestBehavior.opaque,
-                    onTap: widget.onLockTap,
-                  ),
-                ),
-              ),
-          ],
+        return ArenaStack(
+          scene: scene,
+          view: v,
+          motion: motion,
+          now: _now,
+          laneLabel: _laneLabel,
+          onLane: (lane) => onTap(lane, scene),
+          onLockTap: widget.onLockTap,
         );
       },
     );
@@ -369,37 +450,88 @@ class _GameSceneState extends State<GameScene>
   }
 }
 
+/// The painted arena with one tap target per lane and the lock tile.
+class ArenaStack extends StatelessWidget {
+  const ArenaStack({
+    super.key,
+    required this.scene,
+    required this.view,
+    required this.motion,
+    required this.now,
+    required this.laneLabel,
+    required this.onLane,
+    this.onLockTap,
+  });
+  final SceneLayout scene;
+  final ArenaView view;
+  final SceneMotion motion;
+  final int now;
+  final String Function(int lane) laneLabel;
+  final void Function(int lane) onLane;
+  final VoidCallback? onLockTap;
+  @override
+  Widget build(BuildContext context) => Stack(
+    children: [
+      Positioned.fill(
+        child: RepaintBoundary(
+          child: CustomPaint(
+            painter: ArenaPainter(
+              scene: scene,
+              view: view,
+              motion: motion,
+              now: now,
+            ),
+          ),
+        ),
+      ),
+      for (int lane = 0; lane < view.lanes.length; lane++)
+        Positioned.fromRect(
+          rect: scene.laneRect(lane),
+          child: Semantics(
+            button: view.playing && view.lanes[lane].isNotEmpty,
+            label: laneLabel(lane),
+            child: GestureDetector(
+              key: ValueKey('lane-$lane'),
+              behavior: HitTestBehavior.opaque,
+              onTap: () => onLane(lane),
+            ),
+          ),
+        ),
+      if (view.lockOpen)
+        Positioned.fromRect(
+          rect: scene.lockTile,
+          child: Semantics(
+            button: true,
+            label: 'Unlock an extra waiting slot',
+            child: GestureDetector(
+              key: const ValueKey('lock-slot'),
+              behavior: HitTestBehavior.opaque,
+              onTap: onLockTap,
+            ),
+          ),
+        ),
+    ],
+  );
+}
+
 class ArenaPainter extends CustomPainter {
   ArenaPainter({
     required this.scene,
-    required this.level,
-    required this.board,
-    required this.hint,
-    required this.walkers,
-    required this.departures,
-    required this.laneSteps,
-    required this.shift,
-    required this.arrival,
+    required this.view,
+    required this.motion,
     required this.now,
-    this.skin = 'classic',
-    this.terminal = 'terminal-classic',
-    this.lockOpen = true,
   });
   final SceneLayout scene;
-  final Level level;
-  final Board board;
-  final int? hint;
-  final List<SceneWalker> walkers;
-  final List<SceneDeparture> departures;
-  final Map<int, int> laneSteps;
-  final SlotShift? shift;
-  final int arrival, now;
-  final String skin, terminal;
-  final bool lockOpen;
+  final ArenaView view;
+  final SceneMotion motion;
+  final int now;
+  String get skin => view.skin;
+  String get terminal => view.terminal;
+  List<SceneWalker> get walkers => motion.walkers;
 
   @override
   void paint(Canvas c, Size s) {
-    final pal = ArenaPalette.forId(terminal);
+    final pal = ArenaPalette.forId(view.terminal);
     c.drawRect(Offset.zero & s, Paint()..color = pal.ground);
     final kerb = scene.roadTop + scene.roadH * .3;
     c.drawRect(Rect.fromLTWH(0, 0, s.width, kerb), Paint()..color = pal.sky);
@@ -472,7 +604,7 @@ class ArenaPainter extends CustomPainter {
     final line = Paint()
       ..color = pal.ground.withValues(alpha: .35)
       ..strokeWidth = 1.5;
-    for (int lane = 1; lane < level.lanes.length; lane++) {
+    for (int lane = 1; lane < view.lanes.length; lane++) {
       final x = box.left + 8 + scene.laneW * lane;
       for (double y = box.top + 14; y < s.height; y += 16) {
         c.drawLine(Offset(x, y), Offset(x, y + 7), line);
@@ -482,24 +614,32 @@ class ArenaPainter extends CustomPainter {
 
   void _crowd(Canvas c, Size s) {
     final size = scene.laneW * .9;
-    final playing = board.phase(level) == GamePhase.playing;
     // Front rows first: rows nearer the bottom overlap those ahead of them.
     for (int row = 0; row < scene.visibleRows; row++) {
-      for (int lane = 0; lane < level.lanes.length; lane++) {
-        final depth = board.taken[lane] + row;
-        if (depth >= level.lanes[lane].length) continue;
-        final stepped = laneSteps[lane];
-        final lag = stepped == null
+      for (int lane = 0; lane < view.lanes.length; lane++) {
+        final line = view.lanes[lane];
+        if (row >= line.length) continue;
+        final stepped = motion.laneSteps[lane];
+        var lag = stepped == null
             ? 0.0
             : 1 -
                   Curves.easeOut.transform(
-                    ((now - stepped) / 230).clamp(0.0, 1.0),
+                    ((now - stepped) / SceneMotion.step).clamp(0.0, 1.0),
                   );
+        // A newcomer walks up from below to the back of the line.
+        final came = motion.arrivals[lane];
+        if (came != null && row == line.length - 1) {
+          lag +=
+              2.5 *
+              (1 -
+                  Curves.easeOut.transform(
+                    ((now - came) / SceneMotion.arrive).clamp(0.0, 1.0),
+                  ));
+        }
         final p = scene.person(lane, row + lag);
         if (p.dy - size > s.height) continue;
-        final color = level.lanes[lane][depth];
-        final secret = row > 0 && level.isHidden(lane, depth);
-        if (row == 0 && hint == lane && playing) {
+        final color = line[row];
+        if (row == 0 && view.hint == lane && view.playing) {
           final pulse = 1 + .1 * sin(now / 110);
           c.drawOval(
             Rect.fromCenter(
@@ -515,9 +655,9 @@ class ArenaPainter extends CustomPainter {
           c,
           p,
           size,
-          busColors[color],
-          hidden: secret,
-          mark: row == 0 ? color : null,
+          busColors[max(color, 0)],
+          hidden: color < 0,
+          mark: row == 0 && color >= 0 ? color : null,
         );
       }
     }
@@ -534,7 +674,7 @@ class ArenaPainter extends CustomPainter {
 
   void _slots(Canvas c) {
     final radius = Radius.circular(scene.slotSize * .2);
-    for (int i = 0; i < board.slots; i++) {
+    for (int i = 0; i < view.slots; i++) {
       final r = scene.slot(i);
       c.drawRRect(
         RRect.fromRectAndRadius(r.shift(const Offset(0, 3)), radius),
@@ -544,7 +684,7 @@ class ArenaPainter extends CustomPainter {
         RRect.fromRectAndRadius(r, radius),
         Paint()..color = Colors.white,
       );
-      if (board.continued && i == board.slots - 1) {
+      if (view.continued && i == view.slots - 1) {
         c.drawRRect(
           RRect.fromRectAndRadius(r, radius),
           Paint()
@@ -554,25 +694,26 @@ class ArenaPainter extends CustomPainter {
         );
       }
     }
-    if (lockOpen) _lock(c, scene.lockTile, radius);
+    if (view.lockOpen) _lock(c, scene.lockTile, radius);
     final arriving = {
       for (final w in walkers)
         if (w.slot >= 0 && !w.done(now)) w.slot,
     };
-    for (int i = 0; i < board.waiting.length; i++) {
+    final shift = motion.shift;
+    for (int i = 0; i < view.waiting.length; i++) {
       if (arriving.contains(i)) continue;
       var p = scene.slotFeet(i);
       final from = shift?.from[i];
       if (from != null) {
-        final t = ((now - shift!.start) / 230).clamp(0.0, 1.0);
+        final t = ((now - shift!.start) / SceneMotion.step).clamp(0.0, 1.0);
         p = Offset.lerp(scene.slotFeet(from), p, Curves.easeOut.transform(t))!;
       }
       paintRider(
         c,
         p,
         scene.slotSize * .8,
-        busColors[board.waiting[i].index],
-        mark: board.waiting[i].index,
+        busColors[view.waiting[i].index],
+        mark: view.waiting[i].index,
       );
     }
     // Passengers who will hop on once their bus has pulled in.
@@ -639,18 +780,19 @@ class ArenaPainter extends CustomPainter {
       for (final w in walkers)
         if (w.bus == bus && !w.done(now)) w.seat,
     };
-    final queued = board.busIndex + 1;
-    if (queued < level.buses.length) {
-      paintCoach(c, scene.queuedBus, level.buses[queued], skin: skin);
+    final next = view.next;
+    if (next != null) {
+      paintCoach(c, scene.queuedBus, next, capacity: view.capacity, skin: skin);
     }
-    for (final d in departures) {
-      final t = ((now - d.start) / 480).clamp(0.0, 1.0);
+    for (final d in motion.departures) {
+      final t = ((now - d.start) / SceneMotion.busTravel).clamp(0.0, 1.0);
       final rect = Rect.lerp(stop, scene.goneBus, Curves.easeIn.transform(t))!;
       paintCoach(
         c,
         rect,
-        level.buses[d.bus],
-        seated: busCapacity,
+        d.color,
+        seated: view.capacity,
+        capacity: view.capacity,
         skin: skin,
         emptySeats: emptySeats(d.bus),
       );
@@ -663,9 +805,12 @@ class ArenaPainter extends CustomPainter {
         );
       }
     }
-    final current = board.currentBus(level);
+    final current = view.current;
     if (current != null) {
-      final t = ((now - arrival) / 480).clamp(0.0, 1.0);
+      final t = ((now - motion.arrival) / SceneMotion.busTravel).clamp(
+        0.0,
+        1.0,
+      );
       final rect = Rect.lerp(
         scene.queuedBus,
         stop,
@@ -675,9 +820,11 @@ class ArenaPainter extends CustomPainter {
         c,
         rect,
         current,
-        seated: board.boarded,
+        seated: view.boarded,
+        capacity: view.capacity,
         skin: skin,
-        emptySeats: emptySeats(board.busIndex),
+        emptySeats: emptySeats(view.busSerial),
+        rainbow: view.rainbow,
       );
       if (t > 0 && t < 1) {
         paintPuff(

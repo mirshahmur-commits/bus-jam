@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:bus_jam/game/controller.dart';
+import 'package:bus_jam/game/endless.dart';
 import 'package:bus_jam/game/engine.dart';
 import 'package:bus_jam/game/model.dart';
 import 'package:bus_jam/platform/analytics.dart';
@@ -408,5 +409,78 @@ void main() {
     // Medals for retired boards do not count toward crowd-route stars.
     expect(c.totalStars, 0);
     expect(c.rankedDailyScores, isEmpty);
+  });
+
+  test('BR-39 rush awards coins once and keeps the best score', () async {
+    final s = MemoryProgressStore();
+    final c = create(store: s);
+    await c.load();
+    c.startRush();
+    final run = c.rush!;
+    while (!run.over) {
+      c.rushTick(400);
+      final lane = run.lanes.indexWhere((l) => l.isNotEmpty);
+      if (lane >= 0) c.rushTap(lane);
+    }
+    final coins = c.coins;
+    c.settleRush();
+    expect(c.coins, coins + run.coins);
+    expect(c.bestScore, run.score);
+    expect(c.rushNewBest, run.score > 0);
+    c.settleRush();
+    expect(c.coins, coins + run.coins);
+    await c.save();
+    final r = create(store: s);
+    await r.load();
+    expect(r.bestScore, run.score);
+    expect(r.rushRuns, 1);
+  });
+
+  test('BR-40 upgrades and boosters debit once and persist', () async {
+    final s = MemoryProgressStore();
+    final c = create(store: s);
+    await c.load();
+    c.coins = 1000;
+    expect(c.buyUpgrade(Upgrade.bigBus), true);
+    expect(c.coins, 700);
+    expect(c.buyUpgrade(Upgrade.bigBus), true);
+    expect(c.coins, 0);
+    expect(c.buyUpgrade(Upgrade.bigBus), false);
+    c.coins = 60;
+    expect(c.boosters[Booster.rainbow], 1);
+    expect(c.buyBooster(Booster.rainbow), true);
+    expect((c.coins, c.boosters[Booster.rainbow]), (0, 2));
+    expect(c.buyBooster(Booster.slow), false);
+    c.startRush();
+    expect(c.rush!.config.capacity, 5);
+    expect(c.useBooster(Booster.rainbow), isNotNull);
+    expect(c.boosters[Booster.rainbow], 1);
+    expect(c.useBooster(Booster.taxi), isNull, reason: 'nobody waits');
+    expect(c.boosters[Booster.taxi], 1);
+    await c.save();
+    final r = create(store: s);
+    await r.load();
+    expect(r.upgrades[Upgrade.bigBus], 2);
+    expect(r.boosters[Booster.rainbow], 1);
+    expect(r.boosters[Booster.taxi], 1);
+  });
+
+  test('BR-41 a jammed rush can continue once with an extra slot', () async {
+    final c = create();
+    await c.load();
+    c.startRush();
+    final run = c.rush!;
+    while (!run.over) {
+      final lane = run.lanes.indexWhere(
+        (l) => l.isNotEmpty && l.first != run.bus,
+      );
+      c.rushTap(lane >= 0 ? lane : run.lanes.indexWhere((l) => l.isNotEmpty));
+    }
+    expect(run.end, RushEnd.slotsFull);
+    final coins = c.coins;
+    expect(c.rushContinue(), true);
+    expect(c.coins, coins - 50);
+    expect(run.over, false);
+    expect(c.rushContinue(), false);
   });
 }

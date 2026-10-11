@@ -15,7 +15,7 @@ for name, prefix in [
         print(prefix + json.dumps(json.loads(report.read_text())))
 
 screens = sorted((root / "ios-screens").glob("*.png"))
-if len(screens) > 7:
+if len(screens) > 8:
     raise SystemExit("Unexpected native screen count")
 previews = root / "ios-previews"
 previews.mkdir(parents=True, exist_ok=True)
