@@ -54,7 +54,7 @@ void traffic(GameController c) {
 void win(GameController c) {
   final solution = GameEngine.solve(c.level, c.board)!;
   for (final lane in solution) {
-    c.release(lane);
+    c.tap(lane);
   }
 }
 
@@ -75,7 +75,7 @@ void main() {
       win(c);
       expect(c.coins, 175);
       expect(c.unlocked, 2);
-      expect(c.release(0).accepted, false);
+      expect(c.tap(0).accepted, false);
       c.openLevel(1);
       win(c);
       expect(c.coins, 175);
@@ -114,8 +114,8 @@ void main() {
     await c.load();
     traffic(c);
     final original = c.board.toJson();
-    c.release(1);
-    expect(c.board.cursor, 3);
+    c.tap(0);
+    expect(c.board.waiting, [BusColor.blue]);
     expect(c.spend(Assist.undo), true);
     expect(jsonEncode(c.board.toJson()), jsonEncode(original));
     expect(c.coins, 150);
@@ -125,7 +125,7 @@ void main() {
     final c = create();
     await c.load();
     traffic(c);
-    c.release(0);
+    c.tap(0);
     final seed = c.level.seed;
     c.restart();
     expect(c.level.seed, seed);
@@ -138,18 +138,19 @@ void main() {
     final c = create();
     await c.load();
     traffic(c);
-    for (int i = 0; i < 3; i++) {
-      c.release(0);
+    for (final lane in trafficFailure) {
+      c.tap(lane);
     }
+    expect(c.board.phase(c.level), GamePhase.failed);
     expect(c.spend(Assist.extraSlot), true);
-    expect(c.board.slots, 4);
+    expect(c.board.slots, 6);
     expect(c.coins, 100);
     expect(c.spend(Assist.extraSlot), false);
     expect(c.spend(Assist.undo), true);
-    expect(c.board.slots, 4);
+    expect(c.board.slots, 6);
     expect(c.board.continued, true);
     c.restart();
-    expect(c.board.slots, 3);
+    expect(c.board.slots, 5);
     expect(c.board.continued, false);
   });
   for (final outcome in [
@@ -184,7 +185,7 @@ void main() {
       await c.load();
       final first = c.watch(Assist.hint);
       expect(await c.watch(Assist.hint), false);
-      expect(c.release(0).accepted, false);
+      expect(c.tap(0).accepted, false);
       c.restart();
       expect(c.attempts, 1);
       a.pending!.complete(AdOutcome.rewarded);
@@ -199,7 +200,7 @@ void main() {
     final c = create(store: s);
     await c.load();
     traffic(c);
-    c.release(0);
+    c.tap(0);
     c.settings(sound: false, haptics: false, reducedMotion: true);
     c.finishOnboarding();
     c.spend(Assist.hint);
@@ -247,7 +248,7 @@ void main() {
       var today = DateTime(2026, 10, 6);
       final c = create(clock: () => today);
       await c.load();
-      c.release(c.level.solution.first);
+      c.tap(c.level.solution.first);
       final previous = jsonEncode(c.board.toJson());
       c.openDaily();
       win(c);
@@ -349,7 +350,7 @@ void main() {
         'session_start',
         'level_start',
         'hint',
-        'bus_release',
+        'passenger_tap',
         'level_win',
         'lifecycle',
       ]),
@@ -364,5 +365,48 @@ void main() {
     expect(c.removeAds, false);
     win(c);
     expect(c.board.phase(c.level), GamePhase.won);
+  });
+  test('BR-38 depot-era save keeps economy and opens a crowd route', () async {
+    final raw = jsonEncode({
+      'schema': 2,
+      'unlocked': 7,
+      'coins': 420,
+      'session': {
+        'level': {'version': 2},
+      },
+      'campaign': null,
+      'daily': false,
+      'completedDay': '2026-10-01',
+      'streak': 3,
+      'wins': 6,
+      'attempts': 2,
+      'sound': false,
+      'haptics': true,
+      'reducedMotion': false,
+      'removeAds': true,
+      'onboarded': true,
+      'lastAd': null,
+      'records': {
+        '2:3': {'score': 1900, 'stars': 3, 'parkingCost': 0},
+      },
+      'rankedDailyScores': {'20261001': 1800},
+      'ownedCosmetics': ['classic', 'terminal-classic', 'metro'],
+      'selectedBus': 'metro',
+      'selectedTerminal': 'terminal-classic',
+    });
+    final c = create(store: MemoryProgressStore(raw));
+    await c.load();
+    expect(c.message, isNull);
+    expect(c.unlocked, 7);
+    expect(c.coins, 420);
+    expect(c.level.number, 7);
+    expect(c.level.generatorVersion, 3);
+    expect(c.board.moves, 0);
+    expect(c.removeAds, true);
+    expect(c.selectedBus, 'metro');
+    expect(c.streak, 3);
+    // Medals for retired boards do not count toward crowd-route stars.
+    expect(c.totalStars, 0);
+    expect(c.rankedDailyScores, isEmpty);
   });
 }

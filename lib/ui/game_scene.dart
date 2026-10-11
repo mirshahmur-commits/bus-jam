@@ -7,134 +7,209 @@ import '../game/controller.dart';
 import '../game/model.dart';
 import 'art.dart';
 
+/// Geometry of the arena: road with buses, the stop with waiting slots,
+/// then the crowd corridor that streams off the bottom of the screen.
 class SceneLayout {
-  SceneLayout(this.size, this.lanes, this.slots, {this.maxDepth = 5});
+  SceneLayout(this.size, this.level, this.slots, {this.top = 0});
   final Size size;
-  final int lanes, slots;
-  final int maxDepth;
-  double get busW =>
-      max(32, min(86, (size.width - 28) / max(lanes, slots) - 10));
-  double get busH => busW * 1.48;
-  double get parkY => 20;
-  double get depotY => parkY + busH + 66;
-  Rect slot(int i) => Rect.fromLTWH(
-    20 + (size.width - 40) / slots * (i + .5) - busW / 2,
-    parkY,
-    busW,
-    busH,
-  );
-  Rect depot(int lane, int depth) => Rect.fromLTWH(
-    20 + (size.width - 40) / lanes * (lane + .5) - busW / 2,
-    depotY + depth * 35,
-    busW,
-    busH,
-  );
-  Offset person(int i) => Offset(31 + i * (size.width - 62) / 8, queueY + 26);
-  double get queueY => depotY + max(4, maxDepth - 1) * 35 + busH + 24;
-  Map<int, Rect> positions(Board board) => {
-    for (int i = 0; i < board.parked.length; i++) board.parked[i].id: slot(i),
-    for (int lane = 0; lane < board.lanes.length; lane++)
-      for (int depth = 0; depth < board.lanes[lane].length; depth++)
-        board.lanes[lane][depth].id: depot(lane, depth),
-  };
-  static double heightFor(double width, Level level) {
-    final layout = SceneLayout(
-      Size(width, 0),
-      level.lanes.length,
-      level.slots,
-      maxDepth: level.lanes.map((lane) => lane.length).fold(1, max),
-    );
-    return layout.queueY + 86;
-  }
-}
+  final Level level;
+  final int slots;
 
-class _Motion {
-  const _Motion(this.from, this.to, this.start);
-  final Rect from, to;
-  final int start;
-  Rect at(int now) => Rect.lerp(
-    from,
-    to,
-    Curves.easeOutCubic.transform(((now - start) / 260).clamp(0.0, 1.0)),
-  )!;
-  bool done(int now) => now - start >= 260;
-}
-
-class BusDeparture {
-  const BusDeparture(this.bus, this.from, this.parking, this.start);
-  final Bus bus;
-  final Rect from, parking;
-  final int start;
-  Rect at(int now, double width) {
-    final p = ((now - start) / 440).clamp(0.0, 1.0);
-    if (p < .43) {
-      return Rect.lerp(from, parking, Curves.easeOutCubic.transform(p / .43))!;
-    }
-    return parking.shift(
-      Offset(Curves.easeInCubic.transform((p - .43) / .57) * (width + 100), 0),
+  /// Space reserved for the HUD above the road.
+  final double top;
+  double get roadH => ((size.height - top) * .24).clamp(96.0, 170.0);
+  double get roadTop => top;
+  double get roadBottom => roadTop + roadH;
+  Rect get busRect {
+    final w = min(size.width * .56, roadH * 1.75);
+    final h = w * .55;
+    return Rect.fromLTWH(
+      size.width * .53 - w * .5,
+      roadBottom - h - roadH * .06,
+      w,
+      h,
     );
   }
 
-  bool done(int now) => now - start >= 440;
+  /// The next bus waits at the left edge, half on screen.
+  Rect get queuedBus =>
+      busRect.shift(Offset(-busRect.left - busRect.width * .62, 0));
+  Rect get goneBus => busRect.shift(Offset(size.width - busRect.left + 30, 0));
+  Offset seat(Rect bus, int seat) => Offset(
+    bus.left + bus.width * (.34 + seat * .22),
+    bus.top + bus.height * .74,
+  );
+  Offset get door => Offset(busRect.left + busRect.width * .5, roadBottom + 4);
+  double get slotSize =>
+      min(min(54, roadH * .44), (size.width - 24) / (max(slots, 5) + 2.6));
+  double get slotGap => slotSize * .16;
+  double get stopTop => roadBottom;
+  double get stopH => slotSize + 26;
+
+  /// Waiting slots plus one lock tile for the extra slot.
+  int get tiles => slots + 1;
+  Rect slot(int i) {
+    final total = tiles * slotSize + (tiles - 1) * slotGap;
+    return Rect.fromLTWH(
+      size.width / 2 - total / 2 + i * (slotSize + slotGap),
+      stopTop + 13,
+      slotSize,
+      slotSize,
+    );
+  }
+
+  Rect get lockTile => slot(slots);
+  Offset slotFeet(int i) {
+    final r = slot(i);
+    return Offset(r.center.dx, r.bottom - r.height * .1);
+  }
+
+  double get laneW => min(72, (size.width - 48) / level.lanes.length);
+  double get rowH => laneW * .6;
+  double get corridorTop => stopTop + stopH;
+  Rect get corridor {
+    final w = laneW * level.lanes.length + 16;
+    return Rect.fromLTRB(
+      size.width / 2 - w / 2,
+      corridorTop - 2,
+      size.width / 2 + w / 2,
+      size.height + 40,
+    );
+  }
+
+  double laneX(int lane) => corridor.left + 8 + laneW * (lane + .5);
+
+  /// Feet of the passenger [row] places behind the front of [lane].
+  Offset person(int lane, double row) =>
+      Offset(laneX(lane), corridorTop + laneW * .95 + rowH * row);
+  Rect laneRect(int lane) => Rect.fromLTWH(
+    corridor.left + 8 + laneW * lane,
+    corridorTop,
+    laneW,
+    max(0, size.height - corridorTop),
+  );
+  int get visibleRows => ((size.height - corridorTop) / rowH).ceil() + 1;
+  Offset get exit => Offset(size.width / 2, corridorTop - 4);
 }
 
-class PassengerFlight {
-  const PassengerFlight(this.color, this.from, this.to, this.start);
+class SceneWalker {
+  SceneWalker(
+    this.points,
+    this.color,
+    this.start,
+    this.duration, {
+    this.bus = -1,
+    this.seat = -1,
+    this.slot = -1,
+    this.fromSlot = -1,
+  });
+  final List<Offset> points;
   final BusColor color;
-  final Offset from, to;
+  final int start, duration, bus, seat, slot, fromSlot;
+  bool done(int now) => now >= start + duration;
+  Offset at(int now) {
+    final t = ((now - start) / duration).clamp(0.0, 1.0);
+    var total = 0.0;
+    final lengths = <double>[];
+    for (int i = 1; i < points.length; i++) {
+      final d = (points[i] - points[i - 1]).distance;
+      lengths.add(d);
+      total += d;
+    }
+    var goal = total * Curves.easeInOut.transform(t);
+    for (int i = 0; i < lengths.length; i++) {
+      if (goal <= lengths[i] || i == lengths.length - 1) {
+        final f = lengths[i] == 0 ? 1.0 : (goal / lengths[i]).clamp(0.0, 1.0);
+        return Offset.lerp(points[i], points[i + 1], f)!;
+      }
+      goal -= lengths[i];
+    }
+    return points.last;
+  }
+}
+
+class SceneDeparture {
+  SceneDeparture(this.bus, this.start);
+  final int bus, start;
+}
+
+/// Remaining waiting passengers slide left once others have boarded.
+class SlotShift {
+  SlotShift(this.from, this.start);
+  final Map<int, int> from;
   final int start;
-  double progress(int now) => ((now - start) / 220).clamp(0.0, 1.0);
-  bool done(int now) => now - start >= 220;
 }
 
 class GameScene extends StatefulWidget {
-  const GameScene({super.key, required this.controller, required this.onMove});
+  const GameScene({
+    super.key,
+    required this.controller,
+    required this.onMove,
+    this.onIdle,
+    this.onLockTap,
+    this.top = 0,
+  });
   final GameController controller;
   final void Function(MoveResult) onMove;
+
+  /// Called when every walk and bus motion has finished.
+  final VoidCallback? onIdle;
+
+  /// Called when the locked extra slot is tapped.
+  final VoidCallback? onLockTap;
+  final double top;
   @override
   State<GameScene> createState() => _GameSceneState();
 }
 
-/// Each entity keeps its own motion. Input is never gated on an animation.
-/// Retargeting starts from the current rendered position, including rapid taps.
 class _GameSceneState extends State<GameScene>
     with SingleTickerProviderStateMixin {
+  static const busTravel = 480, step = 230;
   late final Ticker ticker;
+  // Scene time advances with frames so tests and devices share one clock.
+  int _base = 0, _now = 0;
+  final walkers = <SceneWalker>[];
+  final departures = <SceneDeparture>[];
+  final laneSteps = <int, int>{};
+  SlotShift? shift;
+  int arrival = -100000;
   late Board observed;
-  SceneLayout? layout;
-  final motions = <int, _Motion>{};
-  final departures = <BusDeparture>[];
-  final flights = <PassengerFlight>[];
-  int now = 0, epoch = 0;
-  int? pressedLane;
+  GameController get c => widget.controller;
+  int get now => _now;
 
   @override
   void initState() {
     super.initState();
-    observed = widget.controller.board;
+    observed = c.board;
     ticker = createTicker((elapsed) {
-      setState(() {
-        now = epoch + elapsed.inMilliseconds;
-        motions.removeWhere((id, motion) => motion.done(now));
-        departures.removeWhere((departure) => departure.done(now));
-        flights.removeWhere((flight) => flight.done(now));
-      });
-      if (motions.isEmpty && departures.isEmpty && flights.isEmpty) {
+      _now = _base + elapsed.inMilliseconds;
+      final t = now;
+      walkers.removeWhere((w) => w.done(t));
+      departures.removeWhere((d) => t > d.start + busTravel);
+      laneSteps.removeWhere((_, s) => t > s + step);
+      if (shift != null && t > shift!.start + step) shift = null;
+      if (walkers.isEmpty &&
+          departures.isEmpty &&
+          laneSteps.isEmpty &&
+          shift == null &&
+          t > arrival + busTravel) {
         ticker.stop();
+        _base = _now;
+        widget.onIdle?.call();
       }
+      setState(() {});
     });
   }
 
-  @override
-  void didUpdateWidget(covariant GameScene oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (observed != widget.controller.board ||
-        widget.controller.reducedMotion) {
-      motions.clear();
+  void _sync() {
+    // Undo, restart and level changes replace the board without a tap.
+    if (!identical(observed, c.board)) {
+      observed = c.board;
+      walkers.clear();
       departures.clear();
-      flights.clear();
-      ticker.stop();
-      observed = widget.controller.board;
+      laneSteps.clear();
+      shift = null;
+      arrival = -100000;
     }
   }
 
@@ -144,343 +219,477 @@ class _GameSceneState extends State<GameScene>
     super.dispose();
   }
 
-  void release(int lane, int expectedBusId) {
-    final c = widget.controller, scene = layout;
-    if (scene == null || c.busy) return;
-    final old = c.board, oldPositions = scene.positions(c.board);
-    final result = c.release(lane, expectedBusId: expectedBusId);
+  void onTap(int lane, SceneLayout scene) {
+    final before = c.board;
+    final result = c.tap(lane);
     if (!result.accepted) return;
-    observed = result.board;
-    setState(() {
-      pressedLane = null;
-      if (!c.reducedMotion) {
-        final destinations = scene.positions(result.board);
-        for (final entry in destinations.entries) {
-          final from =
-              motions[entry.key]?.at(now) ??
-              oldPositions[entry.key] ??
-              entry.value;
-          if (from != entry.value) {
-            motions[entry.key] = _Motion(from, entry.value, now);
-          }
-        }
-        for (final bus in result.departures) {
-          final oldSlot = old.parked.indexWhere((b) => b.id == bus.id);
-          final parking = scene.slot(
-            oldSlot >= 0 ? oldSlot : old.parked.length,
-          );
-          final from =
-              motions.remove(bus.id)?.at(now) ??
-              oldPositions[bus.id] ??
-              parking;
-          departures.add(BusDeparture(bus, from, parking, now));
-        }
-        for (int i = 0; i < min(12, result.boarding.length); i++) {
-          final boarding = result.boarding[i];
-          final oldSlot = old.parked.indexWhere((b) => b.id == boarding.busId);
-          final target =
-              destinations[boarding.busId] ??
-              scene.slot(oldSlot >= 0 ? oldSlot : old.parked.length);
-          flights.add(
-            PassengerFlight(
-              boarding.color,
-              scene.person(min(8, boarding.passenger - old.cursor)),
-              target.center,
-              now + i * 8,
-            ),
-          );
-        }
-        if (!ticker.isActive) {
-          epoch = now;
-          ticker.start();
-        }
-      }
-    });
+    observed = c.board;
+    if (!c.reducedMotion) _animate(before, result, scene);
     widget.onMove(result);
+    setState(() {});
+  }
+
+  void _animate(Board before, MoveResult result, SceneLayout scene) {
+    final t = now;
+    final start = scene.person(result.lane, 0);
+    final path = [
+      start,
+      Offset(start.dx, scene.corridorTop + scene.rowH * .2),
+      scene.exit,
+    ];
+    if (result.toBus) {
+      path.addAll([scene.door, scene.seat(scene.busRect, result.seat)]);
+    } else {
+      path.add(scene.slotFeet(result.waitingSlot));
+    }
+    var length = 0.0;
+    for (int i = 1; i < path.length; i++) {
+      length += (path[i] - path[i - 1]).distance;
+    }
+    final walk = (length * 1.6).clamp(260.0, 700.0).round();
+    laneSteps[result.lane] = t;
+    walkers.add(
+      SceneWalker(
+        path,
+        result.color!,
+        t,
+        walk,
+        bus: result.toBus ? before.busIndex : -1,
+        seat: result.seat,
+        slot: result.waitingSlot,
+      ),
+    );
+    if (result.departures > 0) {
+      final leave = t + walk + 60;
+      departures.add(SceneDeparture(before.busIndex, leave));
+      arrival = leave + 140;
+      final next = result.board;
+      // Waiting passengers board by themselves once their bus has pulled in.
+      final landed = arrival + busTravel;
+      for (int k = 0; k < result.fromWaiting.length; k++) {
+        final slot = result.fromWaiting[k];
+        final seat = min(k, busCapacity - 1);
+        walkers.add(
+          SceneWalker(
+            [scene.slotFeet(slot), scene.door, scene.seat(scene.busRect, seat)],
+            before.waiting[slot],
+            landed + k * 110,
+            360,
+            bus: next.busIndex,
+            seat: seat,
+            fromSlot: slot,
+          ),
+        );
+      }
+      if (result.fromWaiting.isNotEmpty) {
+        final kept = [
+          for (int i = 0; i < before.waiting.length; i++)
+            if (!result.fromWaiting.contains(i)) i,
+        ];
+        shift = SlotShift({
+          for (int k = 0; k < kept.length; k++) k: kept[k],
+        }, landed + result.fromWaiting.length * 110 + 200);
+      }
+    }
+    if (!ticker.isActive) ticker.start();
   }
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) {
-      final c = widget.controller;
-      final scene = SceneLayout(
-        Size(constraints.maxWidth, constraints.maxHeight),
-        c.board.lanes.length,
-        c.board.slots,
-        maxDepth: c.board.lanes.map((lane) => lane.length).fold(1, max),
-      );
-      layout = scene;
-      final positions = scene
-          .positions(c.board)
-          .map((id, rect) => MapEntry(id, motions[id]?.at(now) ?? rect));
-      return Stack(
-        children: [
-          Positioned.fill(
-            child: RepaintBoundary(
-              child: CustomPaint(
-                painter: BoardPainter(
-                  c.level,
-                  c.board,
-                  scene,
-                  positions: positions,
-                  departures: departures,
-                  flights: flights,
-                  now: now,
-                  hint: c.hintLane,
-                  pressedLane: pressedLane,
-                  skin: c.selectedBus,
-                  terminal: c.selectedTerminal,
+  Widget build(BuildContext context) {
+    _sync();
+    return LayoutBuilder(
+      builder: (context, box) {
+        final scene = SceneLayout(
+          box.biggest,
+          c.level,
+          c.board.slots,
+          top: widget.top,
+        );
+        final playing = c.board.phase(c.level) == GamePhase.playing;
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: RepaintBoundary(
+                child: CustomPaint(
+                  painter: ArenaPainter(
+                    scene: scene,
+                    level: c.level,
+                    board: c.board,
+                    hint: c.hintLane,
+                    walkers: walkers,
+                    departures: departures,
+                    laneSteps: laneSteps,
+                    shift: shift,
+                    arrival: arrival,
+                    now: now,
+                    skin: c.selectedBus,
+                    terminal: c.selectedTerminal,
+                    lockOpen: !c.board.continued,
+                  ),
                 ),
               ),
             ),
-          ),
-          for (int lane = 0; lane < c.board.lanes.length; lane++)
-            if (c.board.lanes[lane].isNotEmpty)
-              target(scene, lane, c.board.lanes[lane].first),
-        ],
-      );
-    },
-  );
-
-  Widget target(SceneLayout scene, int lane, Bus bus) {
-    final c = widget.controller;
-    return Positioned.fromRect(
-      rect: scene.depot(lane, 0).inflate(8),
-      child: Semantics(
-        label:
-            'Release ${colorNames[bus.color.index]} bus, lane ${lane + 1}, ${bus.capacity} seats',
-        button: true,
-        enabled: c.board.phase(c.level) == GamePhase.playing && !c.busy,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            key: ValueKey('lane-$lane'),
-            borderRadius: BorderRadius.circular(18),
-            onTapDown: (_) => setState(() => pressedLane = lane),
-            onTapCancel: () => setState(() => pressedLane = null),
-            onTap: c.board.phase(c.level) == GamePhase.playing && !c.busy
-                ? () => release(lane, bus.id)
-                : null,
-            child: const SizedBox.expand(),
-          ),
-        ),
-      ),
+            for (int lane = 0; lane < c.level.lanes.length; lane++)
+              Positioned.fromRect(
+                rect: scene.laneRect(lane),
+                child: Semantics(
+                  button: playing && c.board.open(c.level, lane),
+                  label: _laneLabel(lane),
+                  child: GestureDetector(
+                    key: ValueKey('lane-$lane'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => onTap(lane, scene),
+                  ),
+                ),
+              ),
+            if (!c.board.continued)
+              Positioned.fromRect(
+                rect: scene.lockTile,
+                child: Semantics(
+                  button: true,
+                  label: 'Unlock an extra waiting slot',
+                  child: GestureDetector(
+                    key: const ValueKey('lock-slot'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: widget.onLockTap,
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
+  }
+
+  String _laneLabel(int lane) {
+    final front = c.board.front(c.level, lane);
+    if (front == null) return 'Empty lane';
+    final left = c.level.lanes[lane].length - c.board.taken[lane];
+    return 'Lane ${lane + 1}: ${colorNames[front]} passenger in front, $left in line';
   }
 }
 
-class BoardPainter extends CustomPainter {
-  BoardPainter(
-    this.level,
-    this.board,
-    this.layout, {
-    required this.positions,
+class ArenaPainter extends CustomPainter {
+  ArenaPainter({
+    required this.scene,
+    required this.level,
+    required this.board,
+    required this.hint,
+    required this.walkers,
     required this.departures,
-    required this.flights,
+    required this.laneSteps,
+    required this.shift,
+    required this.arrival,
     required this.now,
-    this.hint,
-    this.pressedLane,
     this.skin = 'classic',
     this.terminal = 'terminal-classic',
+    this.lockOpen = true,
   });
+  final SceneLayout scene;
   final Level level;
   final Board board;
-  final SceneLayout layout;
-  final Map<int, Rect> positions;
-  final List<BusDeparture> departures;
-  final List<PassengerFlight> flights;
-  final int now;
-  final int? hint, pressedLane;
+  final int? hint;
+  final List<SceneWalker> walkers;
+  final List<SceneDeparture> departures;
+  final Map<int, int> laneSteps;
+  final SlotShift? shift;
+  final int arrival, now;
   final String skin, terminal;
+  final bool lockOpen;
 
   @override
-  void paint(Canvas c, Size size) {
-    final palette = TerminalPalette.forId(terminal);
-    rr(c, Offset.zero & size, palette.floor, 24);
-    rr(
-      c,
-      Rect.fromLTWH(0, layout.parkY - 12, size.width, layout.busH + 28),
-      palette.road,
-      0,
+  void paint(Canvas c, Size s) {
+    final pal = ArenaPalette.forId(terminal);
+    c.drawRect(Offset.zero & s, Paint()..color = pal.ground);
+    final kerb = scene.roadTop + scene.roadH * .3;
+    c.drawRect(Rect.fromLTWH(0, 0, s.width, kerb), Paint()..color = pal.sky);
+    c.drawRect(
+      Rect.fromLTWH(0, kerb, s.width, scene.roadBottom - kerb),
+      Paint()..color = pal.road,
     );
-    // Repeating lane markers make the parking apron read like a real road.
-    for (double x = 18; x < size.width; x += 38) {
-      rr(
+    c.drawRect(
+      Rect.fromLTWH(0, kerb - 3, s.width, 6),
+      Paint()..color = pal.curb,
+    );
+    c.drawRect(
+      Rect.fromLTWH(0, scene.stopTop, s.width, scene.stopH),
+      Paint()..color = pal.stop,
+    );
+    c.drawRect(
+      Rect.fromLTWH(0, scene.stopTop, s.width, 3),
+      Paint()..color = pal.curb.withValues(alpha: .9),
+    );
+    _corridor(c, s, pal);
+    _buses(c);
+    _slots(c);
+    _crowd(c, s);
+    for (final w in walkers) {
+      if (now < w.start || w.done(now)) continue;
+      final t = (now - w.start) / w.duration;
+      paintRider(
         c,
-        Rect.fromLTWH(x, layout.parkY + layout.busH + 6, 20, 3),
-        palette.line.withValues(alpha: .55),
-        2,
-      );
-    }
-    for (int slot = 0; slot < board.slots; slot++) {
-      final rect = layout.slot(slot).inflate(4);
-      c.drawRRect(
-        RRect.fromRectAndRadius(rect, const Radius.circular(10)),
-        Paint()
-          ..color = palette.line.withValues(alpha: .85)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.8,
-      );
-      if (slot >= board.parked.length) {
-        label(
-          c,
-          'P',
-          rect.center,
-          size: 23,
-          color: palette.line.withValues(alpha: .5),
-        );
-      }
-    }
-    label(
-      c,
-      '${board.slots - board.parked.length} FREE ${board.slots - board.parked.length == 1 ? 'SPACE' : 'SPACES'}',
-      Offset(size.width / 2, layout.parkY + layout.busH + 34),
-      size: 10,
-      color: board.parked.length >= board.slots - 1
-          ? const Color(0xFFCF4438)
-          : terminal == 'terminal-night'
-          ? palette.line
-          : ink,
-    );
-    // Signal danger without solving the puzzle for the player.
-    if (board.cursor < level.passengers.length) {
-      final nextColor = level.passengers[board.cursor];
-      final waitingBus = board.parked.any((bus) => bus.color == nextColor);
-      final exposedBus = board.lanes.any(
-        (lane) => lane.isNotEmpty && lane.first.color == nextColor,
-      );
-      if (!waitingBus &&
-          !exposedBus &&
-          board.parked.length >= board.slots - 1) {
-        label(
-          c,
-          'CAREFUL! NEXT COLOR IS BLOCKED',
-          Offset(size.width / 2, layout.depotY - 42),
-          size: 10,
-          color: const Color(0xFFCF4438),
-        );
-      }
-    }
-    label(
-      c,
-      'CHOOSE A BUS',
-      Offset(size.width / 2, layout.depotY - 22),
-      size: 12,
-      color: ink,
-    );
-    for (int lane = 0; lane < board.lanes.length; lane++) {
-      final top = layout.depot(lane, 0);
-      final bottom = layout.depot(lane, max(0, board.lanes[lane].length - 1));
-      rr(
-        c,
-        Rect.fromLTRB(
-          top.left - 7,
-          top.top - 8,
-          top.right + 7,
-          bottom.bottom + 9,
-        ),
-        palette.road.withValues(alpha: .14),
-        15,
-      );
-      for (int depth = board.lanes[lane].length - 1; depth >= 0; depth--) {
-        final bus = board.lanes[lane][depth];
-        paintBus(
-          c,
-          positions[bus.id]!,
-          bus,
-          opacity: depth == 0 ? 1 : .78,
-          highlighted: depth == 0 && (hint == lane || pressedLane == lane),
-          skin: skin,
-        );
-        if (depth > 0) {
-          final r = layout.depot(lane, depth);
-          rr(c, Rect.fromLTWH(r.right - 6, r.top + 9, 14, 17), ink, 5);
-          label(
-            c,
-            '${bus.capacity}',
-            Offset(r.right + 1, r.top + 17),
-            size: 10,
-            color: Colors.white,
-          );
-        }
-      }
-    }
-    for (final bus in board.parked) {
-      paintBus(c, positions[bus.id]!, bus, skin: skin);
-    }
-    for (final departure in departures) {
-      paintBus(c, departure.at(now, size.width), departure.bus, skin: skin);
-    }
-    // A visible completion meter gives each successful boarding a payoff.
-    final totalPassengers = level.passengers.length;
-    if (totalPassengers > 0) {
-      final track = Rect.fromLTWH(20, layout.queueY - 29, size.width - 40, 5);
-      rr(c, track, ink.withValues(alpha: .12), 3);
-      if (board.cursor > 0) {
-        rr(
-          c,
-          Rect.fromLTWH(
-            track.left,
-            track.top,
-            track.width * board.cursor / totalPassengers,
-            track.height,
-          ),
-          const Color(0xFF2CBF95),
-          3,
-        );
-      }
-    }
-    // Passenger queue is visually separated from the bus depot, matching
-    // the top-to-bottom parking-jam reading order.
-    final queueTop = layout.queueY;
-    label(
-      c,
-      'PASSENGER QUEUE',
-      Offset(size.width / 2, queueTop - 11),
-      size: 10,
-      color: ink,
-    );
-    rr(
-      c,
-      Rect.fromLTWH(9, queueTop, size.width - 18, 66),
-      Colors.white.withValues(alpha: .92),
-      18,
-    );
-    label(
-      c,
-      '${level.passengers.length - board.cursor} WAITING',
-      Offset(size.width - 72, queueTop + 55),
-      size: 9,
-      color: ink,
-    );
-    for (int i = 0; i < min(9, level.passengers.length - board.cursor); i++) {
-      paintPerson(
-        c,
-        layout.person(i),
-        level.passengers[board.cursor + i],
-        scale: i == 0 ? .85 : .67,
-      );
-    }
-    if (board.cursor < level.passengers.length) {
-      label(c, 'NEXT', Offset(31, queueTop + 57), size: 8, color: teal);
-    }
-    for (final flight in flights) {
-      final p = flight.progress(now);
-      if (p <= 0 || p >= 1) continue;
-      paintPerson(
-        c,
-        Offset.lerp(
-          flight.from,
-          flight.to,
-          Curves.easeInOutCubic.transform(p),
-        )!,
-        flight.color,
-        scale: .65 - p * .35,
-        bounce: -sin(p * pi) * 14,
+        w.at(now) - Offset(0, 6 * sin(t * pi * 5).abs()),
+        scene.laneW * .9 * (1 - .25 * t),
+        busColors[w.color.index],
+        mark: w.color.index,
+        arms: true,
       );
     }
   }
 
+  void _corridor(Canvas c, Size s, ArenaPalette pal) {
+    final box = scene.corridor;
+    final outer = RRect.fromRectAndCorners(
+      box.inflate(7),
+      topLeft: const Radius.circular(18),
+      topRight: const Radius.circular(18),
+    );
+    c.drawRRect(
+      outer.shift(const Offset(0, 4)),
+      Paint()..color = Colors.black.withValues(alpha: .08),
+    );
+    c.drawRRect(outer, Paint()..color = pal.curb);
+    c.drawRRect(
+      RRect.fromRectAndCorners(
+        box,
+        topLeft: const Radius.circular(13),
+        topRight: const Radius.circular(13),
+      ),
+      Paint()..color = pal.corridor,
+    );
+    // Neck joining the corridor to the stop.
+    rr(
+      c,
+      Rect.fromLTRB(
+        s.width / 2 - scene.laneW * .7,
+        scene.stopTop + scene.stopH - 10,
+        s.width / 2 + scene.laneW * .7,
+        box.top + 8,
+      ),
+      pal.corridor,
+      6,
+    );
+    final line = Paint()
+      ..color = pal.ground.withValues(alpha: .35)
+      ..strokeWidth = 1.5;
+    for (int lane = 1; lane < level.lanes.length; lane++) {
+      final x = box.left + 8 + scene.laneW * lane;
+      for (double y = box.top + 14; y < s.height; y += 16) {
+        c.drawLine(Offset(x, y), Offset(x, y + 7), line);
+      }
+    }
+  }
+
+  void _crowd(Canvas c, Size s) {
+    final size = scene.laneW * .9;
+    final playing = board.phase(level) == GamePhase.playing;
+    // Front rows first: rows nearer the bottom overlap those ahead of them.
+    for (int row = 0; row < scene.visibleRows; row++) {
+      for (int lane = 0; lane < level.lanes.length; lane++) {
+        final depth = board.taken[lane] + row;
+        if (depth >= level.lanes[lane].length) continue;
+        final stepped = laneSteps[lane];
+        final lag = stepped == null
+            ? 0.0
+            : 1 -
+                  Curves.easeOut.transform(
+                    ((now - stepped) / 230).clamp(0.0, 1.0),
+                  );
+        final p = scene.person(lane, row + lag);
+        if (p.dy - size > s.height) continue;
+        final color = level.lanes[lane][depth];
+        final secret = row > 0 && level.isHidden(lane, depth);
+        if (row == 0 && hint == lane && playing) {
+          final pulse = 1 + .1 * sin(now / 110);
+          c.drawOval(
+            Rect.fromCenter(
+              center: p,
+              width: size * .95 * pulse,
+              height: size * .36 * pulse,
+            ),
+            Paint()..color = const Color(0xFFFFE07A),
+          );
+          _arrow(c, p - Offset(0, size * 1.22 + 4 * sin(now / 140)), size);
+        }
+        paintRider(
+          c,
+          p,
+          size,
+          busColors[color],
+          hidden: secret,
+          mark: row == 0 ? color : null,
+        );
+      }
+    }
+  }
+
+  void _arrow(Canvas c, Offset tip, double size) {
+    final path = Path()
+      ..moveTo(tip.dx, tip.dy)
+      ..lineTo(tip.dx - size * .2, tip.dy - size * .2)
+      ..lineTo(tip.dx + size * .2, tip.dy - size * .2)
+      ..close();
+    c.drawPath(path, Paint()..color = const Color(0xFFFFC93C));
+  }
+
+  void _slots(Canvas c) {
+    final radius = Radius.circular(scene.slotSize * .2);
+    for (int i = 0; i < board.slots; i++) {
+      final r = scene.slot(i);
+      c.drawRRect(
+        RRect.fromRectAndRadius(r.shift(const Offset(0, 3)), radius),
+        Paint()..color = Colors.black.withValues(alpha: .1),
+      );
+      c.drawRRect(
+        RRect.fromRectAndRadius(r, radius),
+        Paint()..color = Colors.white,
+      );
+      if (board.continued && i == board.slots - 1) {
+        c.drawRRect(
+          RRect.fromRectAndRadius(r, radius),
+          Paint()
+            ..color = const Color(0xFFFFC93C)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2.5,
+        );
+      }
+    }
+    if (lockOpen) _lock(c, scene.lockTile, radius);
+    final arriving = {
+      for (final w in walkers)
+        if (w.slot >= 0 && !w.done(now)) w.slot,
+    };
+    for (int i = 0; i < board.waiting.length; i++) {
+      if (arriving.contains(i)) continue;
+      var p = scene.slotFeet(i);
+      final from = shift?.from[i];
+      if (from != null) {
+        final t = ((now - shift!.start) / 230).clamp(0.0, 1.0);
+        p = Offset.lerp(scene.slotFeet(from), p, Curves.easeOut.transform(t))!;
+      }
+      paintRider(
+        c,
+        p,
+        scene.slotSize * .8,
+        busColors[board.waiting[i].index],
+        mark: board.waiting[i].index,
+      );
+    }
+    // Passengers who will hop on once their bus has pulled in.
+    for (final w in walkers) {
+      if (w.fromSlot < 0 || now >= w.start) continue;
+      paintRider(
+        c,
+        w.points.first,
+        scene.slotSize * .8,
+        busColors[w.color.index],
+        mark: w.color.index,
+      );
+    }
+  }
+
+  void _lock(Canvas c, Rect r, Radius radius) {
+    c.drawRRect(
+      RRect.fromRectAndRadius(r.shift(const Offset(0, 3)), radius),
+      Paint()..color = const Color(0xFF6E3FB8),
+    );
+    c.drawRRect(
+      RRect.fromRectAndRadius(r, radius),
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFC77DFF), Color(0xFF9B4DE8)],
+        ).createShader(r),
+    );
+    final body = Rect.fromCenter(
+      center: r.center + Offset(0, -r.height * .06),
+      width: r.width * .36,
+      height: r.height * .26,
+    );
+    c.drawArc(
+      Rect.fromCenter(
+        center: body.topCenter,
+        width: body.width * .7,
+        height: body.height * 1.3,
+      ),
+      pi,
+      pi,
+      false,
+      Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = r.width * .07,
+    );
+    rr(c, body, Colors.white, 3);
+    label(
+      c,
+      '+1',
+      Offset(r.center.dx, r.bottom - r.height * .17),
+      size: r.height * .2,
+      color: Colors.white,
+      weight: FontWeight.w900,
+    );
+  }
+
+  void _buses(Canvas c) {
+    final stop = scene.busRect;
+    // Seats a passenger is still heading for stay empty until arrival.
+    Set<int> emptySeats(int bus) => {
+      for (final w in walkers)
+        if (w.bus == bus && !w.done(now)) w.seat,
+    };
+    final queued = board.busIndex + 1;
+    if (queued < level.buses.length) {
+      paintCoach(c, scene.queuedBus, level.buses[queued], skin: skin);
+    }
+    for (final d in departures) {
+      final t = ((now - d.start) / 480).clamp(0.0, 1.0);
+      final rect = Rect.lerp(stop, scene.goneBus, Curves.easeIn.transform(t))!;
+      paintCoach(
+        c,
+        rect,
+        level.buses[d.bus],
+        seated: busCapacity,
+        skin: skin,
+        emptySeats: emptySeats(d.bus),
+      );
+      if (t > 0) {
+        paintPuff(
+          c,
+          Offset(rect.left, rect.top + rect.height * .8),
+          rect.height * .08,
+          t,
+        );
+      }
+    }
+    final current = board.currentBus(level);
+    if (current != null) {
+      final t = ((now - arrival) / 480).clamp(0.0, 1.0);
+      final rect = Rect.lerp(
+        scene.queuedBus,
+        stop,
+        Curves.easeOutBack.transform(t),
+      )!;
+      paintCoach(
+        c,
+        rect,
+        current,
+        seated: board.boarded,
+        skin: skin,
+        emptySeats: emptySeats(board.busIndex),
+      );
+      if (t > 0 && t < 1) {
+        paintPuff(
+          c,
+          Offset(rect.left, rect.top + rect.height * .8),
+          rect.height * .08,
+          t,
+        );
+      }
+    }
+  }
+
   @override
-  bool shouldRepaint(BoardPainter oldDelegate) => true;
+  bool shouldRepaint(ArenaPainter old) => true;
 }

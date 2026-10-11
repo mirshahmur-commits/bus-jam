@@ -56,7 +56,7 @@ void main() {
     await c.save();
     expect(c.saveFailed, true);
     expect(c.loaded, true);
-    expect(c.release(c.level.solution.first).accepted, true);
+    expect(c.tap(c.level.solution.first).accepted, true);
     await c.save();
   });
   test(
@@ -89,7 +89,7 @@ void main() {
       c.openLevel(6);
       c.totalWins = 3;
       for (final lane in GameEngine.solve(c.level, c.board)!) {
-        c.release(lane);
+        c.tap(lane);
       }
       await c.next();
       expect(c.level.number, 7);

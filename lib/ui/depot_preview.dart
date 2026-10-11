@@ -1,8 +1,9 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../game/model.dart';
 import 'art.dart';
-import 'urban_assets.dart';
 
 class DepotPreview extends StatelessWidget {
   const DepotPreview({
@@ -25,68 +26,55 @@ class _DepotPainter extends CustomPainter {
   final bool busOnly;
   @override
   void paint(Canvas c, Size s) {
-    final palette = TerminalPalette.forId(terminal);
-    rr(c, Offset.zero & s, palette.floor, 20);
+    final pal = ArenaPalette.forId(terminal);
+    c.save();
+    c.clipRRect(
+      RRect.fromRectAndRadius(Offset.zero & s, const Radius.circular(20)),
+    );
+    c.drawRect(Offset.zero & s, Paint()..color = pal.sky);
+    final roadBottom = busOnly ? s.height : s.height * .62;
+    c.drawRect(
+      Rect.fromLTWH(0, s.height * .08, s.width, roadBottom - s.height * .08),
+      Paint()..color = pal.road,
+    );
+    c.drawRect(
+      Rect.fromLTWH(0, s.height * .1, s.width, 4),
+      Paint()..color = pal.curb,
+    );
+    final busW = min(s.width * .56, (roadBottom - s.height * .12) * 2.0);
+    final busH = busW * .46;
+    final top = (s.height * .08 + roadBottom) / 2 - busH * .5;
+    paintCoach(
+      c,
+      Rect.fromLTWH(-busW * .55, top, busW, busH),
+      BusColor.mint,
+      skin: skin,
+    );
+    paintCoach(
+      c,
+      Rect.fromLTWH(s.width * .5 - busW * .42, top, busW, busH),
+      BusColor.gold,
+      seated: 2,
+      skin: skin,
+    );
     if (!busOnly) {
-      c.save();
-      c.clipRRect(
-        RRect.fromRectAndRadius(Offset.zero & s, const Radius.circular(20)),
+      c.drawRect(
+        Rect.fromLTWH(0, roadBottom, s.width, s.height - roadBottom),
+        Paint()..color = pal.stop,
       );
-      UrbanAssets.instance.paint(
-        c,
-        Rect.fromLTWH(0, 0, s.width, s.height * .66),
-        'city',
-        fit: BoxFit.cover,
-      );
-      rr(
-        c,
-        Rect.fromLTWH(0, s.height * .48, s.width, s.height * .52),
-        palette.road,
-        0,
-      );
-      for (int i = 0; i < 3; i++) {
-        final x = s.width * (.17 + i * .33);
-        c.drawLine(
-          Offset(x - 38, s.height * .6),
-          Offset(x + 38, s.height * .6),
-          Paint()
-            ..color = palette.line.withValues(alpha: .65)
-            ..strokeWidth = 2,
-        );
-        paintBus(
+      final step = s.width / 9;
+      const crowd = [2, 0, 4, 1, 2, 3, 5, 0];
+      for (int i = 0; i < crowd.length; i++) {
+        paintRider(
           c,
-          Rect.fromCenter(
-            center: Offset(x, s.height * .62),
-            width: 58,
-            height: 90,
-          ),
-          Bus(i, BusColor.values[i], capacity: i == 1 ? 4 : 2),
-          skin: skin,
+          Offset(step * (i + 1), s.height - 8),
+          min(step * 1.05, (s.height - roadBottom) * .95),
+          busColors[crowd[i]],
+          hidden: i == 5,
         );
       }
-      c.restore();
-    } else {
-      paintBus(
-        c,
-        Rect.fromCenter(
-          center: Offset(s.width * .35, s.height / 2),
-          width: s.height * .57,
-          height: s.height * .9,
-        ),
-        const Bus(0, BusColor.blue, capacity: 4),
-        skin: skin,
-      );
-      paintBus(
-        c,
-        Rect.fromCenter(
-          center: Offset(s.width * .69, s.height / 2),
-          width: s.height * .57,
-          height: s.height * .9,
-        ),
-        const Bus(1, BusColor.coral, capacity: 2),
-        skin: skin,
-      );
     }
+    c.restore();
   }
 
   @override

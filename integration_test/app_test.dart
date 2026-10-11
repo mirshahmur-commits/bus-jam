@@ -54,7 +54,7 @@ void main() {
       final c = controller();
       c.settings(sound: false, haptics: false);
       await shot('native-game');
-      // A second real tap is accepted before the first 440 ms departure ends.
+      // Each tap is accepted while earlier passengers are still walking.
       final route = GameEngine.solve(c.level, c.board)!;
       for (final lane in route) {
         final target = find.byKey(ValueKey('lane-$lane'));
@@ -85,16 +85,17 @@ void main() {
       restored.unlocked = 12;
       restored.restart();
       await t.pumpAndSettle();
-      for (int i = 0; i < 3; i++) {
-        await tap('lane-0');
+      for (final lane in trafficFailure) {
+        await tap('lane-$lane');
       }
       expect(find.byKey(const ValueKey('fail')), findsOneWidget);
       await shot('native-fail');
       await tap('continue');
       await tap('use-coins');
-      expect(restored.board.slots, 4);
-      await tap('lane-0');
-      await tap('lane-1');
+      expect(restored.board.slots, 6);
+      for (final lane in trafficRecovery) {
+        await tap('lane-$lane');
+      }
       expect(find.byKey(const ValueKey('win')), findsOneWidget);
       restored.restart();
       await t.pumpAndSettle();
@@ -123,16 +124,18 @@ void main() {
         alignment: .35,
       );
       await shot('native-garage');
+      final stars = collector.totalStars;
+      expect(stars, greaterThanOrEqualTo(21));
       await collector.save();
       await app.main();
       await t.pumpAndSettle();
       expect(controller().selectedBus, 'metro');
-      expect(controller().totalStars, 24);
+      expect(controller().totalStars, stars);
       await tap('routes');
       await shot('native-map');
       expect(t.takeException(), isNull);
       binding.reportData!.addAll({
-        'version': '1.1.0+2',
+        'version': '2.0.0+3',
         'journey': 'Passed',
         'nativePlatform': true,
         'sandboxPayments': 'Not run',

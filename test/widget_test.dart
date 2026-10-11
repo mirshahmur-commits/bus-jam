@@ -83,16 +83,17 @@ void main() {
     c.history = [];
     c.settings(reducedMotion: true);
     await tap(t, 'play');
-    for (int i = 0; i < 3; i++) {
-      await tap(t, 'lane-0');
+    for (final lane in trafficFailure) {
+      await tap(t, 'lane-$lane');
     }
     expect(find.byKey(const ValueKey('fail')), findsOneWidget);
     await tap(t, 'continue');
     await tap(t, 'use-coins');
     expect(c.coins, 100);
-    expect(c.board.slots, 4);
-    await tap(t, 'lane-0');
-    await tap(t, 'lane-1');
+    expect(c.board.slots, 6);
+    for (final lane in trafficRecovery) {
+      await tap(t, 'lane-$lane');
+    }
     expect(find.byKey(const ValueKey('win')), findsOneWidget);
     expect(t.takeException(), isNull);
   });
@@ -176,7 +177,7 @@ void main() {
       t.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
       final r = GameController(store: s);
       await r.load();
-      expect(r.board.cursor, c.board.cursor);
+      expect(r.board.remaining(r.level), c.board.remaining(c.level));
       expect(r.board.moves, c.board.moves);
       await t.pumpWidget(
         BusJamApp(
@@ -187,7 +188,7 @@ void main() {
       );
       await t.pumpAndSettle();
       await tap(t, 'play');
-      expect(find.text('Route 1'), findsOneWidget);
+      expect(find.text('LEVEL 1'), findsOneWidget);
       expect(t.takeException(), isNull);
     },
   );

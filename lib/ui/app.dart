@@ -10,7 +10,6 @@ import '../game/progression.dart';
 import 'art.dart';
 import 'depot_preview.dart';
 import 'game_scene.dart';
-import 'urban_assets.dart';
 
 class BusJamApp extends StatefulWidget {
   const BusJamApp({
@@ -85,7 +84,7 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
         settling = true;
       });
       settleTimer?.cancel();
-      settleTimer = Timer(const Duration(milliseconds: 460), () {
+      settleTimer = Timer(const Duration(milliseconds: 2500), () {
         if (mounted) {
           setState(() {
             settling = false;
@@ -101,7 +100,7 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
           ? 'win'
           : c.board.phase(c.level) == GamePhase.failed
           ? 'fail'
-          : result.boarding.isNotEmpty
+          : result.toBus || result.fromWaiting.isNotEmpty
           ? 'board'
           : 'tap';
       unawaited(
@@ -190,16 +189,17 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
                   ],
                 ),
           body: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFFE4E8ED),
-                  Color(0xFFF2F1ED),
-                  Color(0xFFDCE2E8),
-                ],
-              ),
+            decoration: BoxDecoration(
+              color: page == 1
+                  ? ArenaPalette.forId(c.selectedTerminal).sky
+                  : null,
+              gradient: page == 1
+                  ? null
+                  : const LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Color(0xFFDCDAFA), Color(0xFFF1F0FF)],
+                    ),
             ),
             child: Center(
               child: ConstrainedBox(
@@ -290,17 +290,25 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
     VoidCallback? onTap, {
     Key? key,
     IconData icon = Icons.arrow_forward_rounded,
-  }) => SizedBox(
+  }) => Container(
     width: double.infinity,
-    height: 58,
+    height: 62,
+    padding: const EdgeInsets.only(bottom: 5),
+    decoration: BoxDecoration(
+      // A darker base under the button gives it a chunky, pressable edge.
+      color: const Color(0xFF1C8A4A),
+      borderRadius: BorderRadius.circular(18),
+    ),
     child: FilledButton(
       key: key,
       onPressed: c.busy ? null : onTap,
       style: FilledButton.styleFrom(
-        backgroundColor: teal,
+        backgroundColor: const Color(0xFF34C46F),
         foregroundColor: Colors.white,
+        disabledBackgroundColor: const Color(0xFF9FD8B5),
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        minimumSize: const Size.fromHeight(57),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),
       child: FittedBox(
         fit: BoxFit.scaleDown,
@@ -394,7 +402,7 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
         ),
         const SizedBox(height: 7),
         const Text(
-          'Your next\nperfect dispatch.',
+          'Clear the crowd.\nFill every bus.',
           style: TextStyle(
             fontSize: 31,
             fontWeight: FontWeight.w900,
@@ -408,8 +416,8 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
           runSpacing: 8,
           children: [
             Chip(
-              avatar: const Icon(Icons.local_parking_rounded, size: 16),
-              label: Text('${c.level.slots} parking slots'),
+              avatar: const Icon(Icons.chair_rounded, size: 16),
+              label: Text('${c.level.slots} waiting slots'),
               visualDensity: VisualDensity.compact,
             ),
             Chip(
@@ -427,7 +435,7 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
         ),
         const SizedBox(height: 16),
         primary(
-          'Continue · Route ${c.board.phase(c.level) == GamePhase.won ? c.unlocked : c.level.number}',
+          'Play · Level ${c.board.phase(c.level) == GamePhase.won ? c.unlocked : c.level.number}',
           () {
             if (c.dailyMode) c.returnToCampaign();
             if (c.board.phase(c.level) == GamePhase.won) {
@@ -566,231 +574,277 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
     ),
   );
 
-  Widget gamePage(BuildContext context) {
-    final phase = c.board.phase(c.level);
-    return LayoutBuilder(
-      builder: (context, constraints) => Stack(
-        children: [
-          SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(18, 12, 18, 20),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    circleButton(
-                      Icons.arrow_back_rounded,
-                      home,
-                      tip: 'Home',
-                      key: const ValueKey('home-button'),
-                    ),
-                    Expanded(
-                      child: Column(
-                        children: [
-                          Text(
-                            c.dailyMode
-                                ? 'DAILY DISPATCH'
-                                : c.level.hard
-                                ? 'CHALLENGE ROUTE'
-                                : c.level.district,
-                            style: const TextStyle(
-                              fontSize: 9,
-                              letterSpacing: 1.3,
-                              color: teal,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          Text(
-                            c.dailyMode
-                                ? 'Today’s route'
-                                : 'Route ${c.level.number}',
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    circleButton(
-                      Icons.tune_rounded,
-                      () => settings(context),
-                      tip: 'Settings',
-                      key: const ValueKey('game-settings'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '${c.board.cursor} / ${c.level.passengers.length} delivered',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    pill(
-                      Icons.monetization_on_rounded,
-                      '${c.coins}',
-                      color: const Color(0xFFAB7A25),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 7),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(7),
-                  child: LinearProgressIndicator(
-                    value: c.board.cursor / c.level.passengers.length,
-                    minHeight: 5,
-                    color: teal,
-                    backgroundColor: const Color(0xFFD9E3E5),
+  Widget hudButton(
+    IconData icon,
+    VoidCallback? onTap, {
+    required String tip,
+    Key? key,
+    List<Color> colors = const [Color(0xFF5AB8FF), Color(0xFF2E7BE6)],
+    String? badge,
+    double size = 50,
+  }) => Tooltip(
+    message: tip,
+    child: GestureDetector(
+      key: key,
+      onTap: onTap,
+      child: Opacity(
+        opacity: onTap == null ? .55 : 1,
+        child: SizedBox(
+          width: size + 8,
+          height: size + 6,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: size,
+                height: size,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: colors,
                   ),
-                ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        c.level.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w900,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                    TextButton.icon(
-                      key: const ValueKey('queue-preview'),
-                      onPressed: () => previewQueue(context),
-                      icon: const Icon(Icons.visibility_outlined, size: 17),
-                      label: const Text('Plan', style: TextStyle(fontSize: 12)),
-                    ),
+                  border: Border.all(color: Colors.white, width: 3),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x553B3680), offset: Offset(0, 3)),
                   ],
                 ),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(22),
-                  child: SizedBox(
-                    height: SceneLayout.heightFor(
-                      constraints.maxWidth - 36,
-                      c.level,
+                child: Icon(icon, color: Colors.white, size: size * .52),
+              ),
+              if (badge != null)
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 5,
+                      vertical: 1,
                     ),
-                    child: GameScene(
-                      key: ValueKey(
-                        'scene-${c.level.generatorVersion}-${c.level.number}-${c.level.seed}',
-                      ),
-                      controller: c,
-                      onMove: onMove,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF3B3680),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.white, width: 1.5),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.star_rounded,
-                      color: Color(0xFFB9852E),
-                      size: 18,
-                    ),
-                    const SizedBox(width: 5),
-                    Expanded(
-                      child: Text(
-                        'Perfect route: parking cost ≤ ${c.level.parkingTarget}',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      '${c.parkingCost}',
-                      key: const ValueKey('parking-cost'),
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        color: c.parkingCost > c.level.parkingTarget
-                            ? const Color(0xFFB77A36)
-                            : teal,
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => scoreHelp(context),
-                      icon: const Icon(Icons.info_outline_rounded, size: 18),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  ],
-                ),
-                Text(
-                  c.hintLane == null
-                      ? c.level.lesson
-                      : 'The glowing bus leads to a winning route.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF687789),
-                  ),
-                ),
-                const SizedBox(height: 13),
-                Row(
-                  children: [
-                    toolButton(
-                      context,
-                      Assist.undo,
-                      Icons.undo_rounded,
-                      'Undo',
-                    ),
-                    const SizedBox(width: 9),
-                    toolButton(
-                      context,
-                      Assist.hint,
-                      Icons.lightbulb_outline_rounded,
-                      'Hint',
-                    ),
-                    const SizedBox(width: 9),
-                    Expanded(
-                      child: OutlinedButton(
-                        key: const ValueKey('restart'),
-                        onPressed: c.busy
-                            ? null
-                            : () => confirmRestart(context),
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size(0, 58),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        child: const Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.refresh_rounded, size: 22),
-                            Text(
-                              'Restart',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                if (c.saveFailed)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 8),
                     child: Text(
-                      'Save unavailable',
-                      style: TextStyle(color: Colors.red),
+                      badge,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                   ),
-              ],
+                ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+
+  Widget hudPill(
+    Widget leading,
+    String text, {
+    Key? key,
+    VoidCallback? onTap,
+  }) => GestureDetector(
+    key: key,
+    onTap: onTap,
+    child: Container(
+      height: 34,
+      padding: const EdgeInsets.only(left: 2, right: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF3B3680).withValues(alpha: .72),
+        borderRadius: BorderRadius.circular(17),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          leading,
+          const SizedBox(width: 5),
+          Text(
+            text,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+              fontSize: 16,
             ),
           ),
-          if (phase != GamePhase.playing && !settling)
-            resultOverlay(context, phase),
         ],
       ),
+    ),
+  );
+
+  Widget gamePage(BuildContext context) {
+    final phase = c.board.phase(c.level);
+    const top = 58.0;
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: GameScene(
+            key: ValueKey(
+              'scene-${c.level.generatorVersion}-${c.level.number}-${c.level.seed}',
+            ),
+            controller: c,
+            onMove: onMove,
+            top: top,
+            onLockTap: () {
+              if (c.available(Assist.extraSlot)) {
+                assist(context, Assist.extraSlot);
+              }
+            },
+            onIdle: () {
+              settleTimer?.cancel();
+              if (settling && mounted) setState(() => settling = false);
+            },
+          ),
+        ),
+        Positioned(
+          left: 10,
+          right: 10,
+          top: 8,
+          child: Row(
+            children: [
+              hudButton(
+                Icons.arrow_back_rounded,
+                home,
+                tip: 'Home',
+                key: const ValueKey('home-button'),
+                size: 40,
+                colors: const [Color(0xFF7C76E0), Color(0xFF524BC0)],
+              ),
+              hudPill(
+                const Icon(
+                  Icons.monetization_on_rounded,
+                  color: Color(0xFFFFC93C),
+                  size: 30,
+                ),
+                '${c.coins}',
+              ),
+              Expanded(
+                child: Center(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF3B3680).withValues(alpha: .72),
+                        borderRadius: BorderRadius.circular(17),
+                      ),
+                      child: Text(
+                        c.dailyMode ? 'DAILY' : 'LEVEL ${c.level.number}',
+                        key: const ValueKey('level-title'),
+                        style: TextStyle(
+                          color: c.level.hard
+                              ? const Color(0xFFFFD45C)
+                              : Colors.white,
+                          fontSize: 21,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: .5,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              hudPill(
+                const Padding(
+                  padding: EdgeInsets.only(left: 8),
+                  child: Icon(
+                    Icons.directions_bus_rounded,
+                    color: Color(0xFFFFC93C),
+                    size: 20,
+                  ),
+                ),
+                '${c.level.buses.length - c.board.busIndex}',
+                key: const ValueKey('queue-preview'),
+                onTap: () => previewQueue(context),
+              ),
+            ],
+          ),
+        ),
+        Positioned(
+          left: 8,
+          top: top + 8,
+          child: Column(
+            children: [
+              hudButton(
+                Icons.settings_rounded,
+                () => settings(context),
+                tip: 'Settings',
+                key: const ValueKey('game-settings'),
+              ),
+              const SizedBox(height: 6),
+              hudButton(
+                Icons.refresh_rounded,
+                c.busy ? null : () => confirmRestart(context),
+                tip: 'Restart',
+                key: const ValueKey('restart'),
+                colors: const [Color(0xFFD38BFF), Color(0xFF9B4DE8)],
+              ),
+            ],
+          ),
+        ),
+        Positioned(
+          right: 8,
+          top: top + 8,
+          child: Column(
+            children: [
+              toolButton(context, Assist.hint, Icons.lightbulb_rounded, 'Hint'),
+              const SizedBox(height: 6),
+              toolButton(context, Assist.undo, Icons.undo_rounded, 'Undo'),
+            ],
+          ),
+        ),
+        if (c.hintLane != null || c.level.number <= 8 && c.board.moves < 4)
+          Positioned(
+            left: 24,
+            right: 24,
+            bottom: 14,
+            child: IgnorePointer(
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF3B3680).withValues(alpha: .85),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    c.hintLane == null
+                        ? c.level.lesson
+                        : 'Tap the glowing lane.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        if (c.saveFailed)
+          const Positioned(
+            left: 0,
+            right: 0,
+            bottom: 60,
+            child: Text(
+              'Save unavailable',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        if (phase != GamePhase.playing && !settling)
+          resultOverlay(context, phase),
+      ],
     );
   }
 
@@ -800,57 +854,32 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Plan your dispatch',
+          'Bus line-up',
           style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
         ),
         const SizedBox(height: 8),
         const Text(
-          'Passengers board in this order. Looking ahead is always free.',
+          'Buses arrive in this order. Each one seats three passengers.',
         ),
         const SizedBox(height: 16),
         Wrap(
-          spacing: 5,
-          runSpacing: 5,
+          spacing: 6,
+          runSpacing: 6,
           children: [
-            for (int i = c.board.cursor; i < c.level.passengers.length; i++)
+            for (int i = c.board.busIndex; i < c.level.buses.length; i++)
               Chip(
+                avatar: const Icon(Icons.directions_bus_rounded, size: 18),
                 label: Text(
-                  '${i - c.board.cursor + 1}',
+                  i == c.board.busIndex
+                      ? '${colorNames[c.level.buses[i].index]} · ${c.board.boarded}/3'
+                      : colorNames[c.level.buses[i].index],
                   style: const TextStyle(fontWeight: FontWeight.w900),
                 ),
-                avatar: Icon(Icons.person_rounded, color: ink, size: 18),
-                backgroundColor: busColors[c.level.passengers[i].index],
+                backgroundColor: busColors[c.level.buses[i].index],
                 side: BorderSide.none,
-                padding: EdgeInsets.zero,
               ),
           ],
         ),
-        const SizedBox(height: 16),
-        for (int lane = 0; lane < c.board.lanes.length; lane++) ...[
-          Text(
-            'Exit ${lane + 1} · front bus first',
-            style: const TextStyle(fontWeight: FontWeight.w900),
-          ),
-          Wrap(
-            spacing: 5,
-            children: [
-              for (final bus in c.board.lanes[lane])
-                Chip(
-                  label: Text(
-                    '${colorNames[bus.color.index]} · ${bus.capacity}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  backgroundColor: busColors[bus.color.index].withValues(
-                    alpha: .55,
-                  ),
-                  side: BorderSide.none,
-                ),
-            ],
-          ),
-        ],
       ],
     ),
   );
@@ -861,12 +890,12 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'A perfect dispatch',
+          'Three-star rush',
           style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
         ),
         SizedBox(height: 16),
         Text(
-          '★ Finish the route.\n★★ Finish with the original parking spaces.\n★★★ Match the route’s parking target without a hint.\n\nParking cost adds the number of waiting buses after each move. A lower total means a cleaner route. One free undo lets you learn; it does not remove a star.\n\nScore: 1,000 for completion, up to 600 for parking efficiency, 250 for original spaces and 150 without hints. Daily ranking accepts runs without hints, undos or extra spaces.',
+          '★ Board everyone.\n★★ Finish without the extra slot.\n★★★ Keep the waiting score at or under the target without a hint.\n\nThe waiting score adds up how many passengers stand in the slots after each tap. Send people straight to their bus to keep it low. One free undo lets you learn; it does not remove a star.\n\nScore: 1,000 for completion, up to 600 for a low waiting score, 250 without the extra slot and 150 without hints. Daily ranking accepts runs without hints, undos or extra slots.',
           style: TextStyle(height: 1.6),
         ),
       ],
@@ -878,36 +907,23 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
     Assist action,
     IconData icon,
     String text,
-  ) => Expanded(
-    child: FilledButton.tonal(
-      key: ValueKey(action.name),
-      onPressed: c.available(action)
-          ? () {
-              if (c.cost(action) == 0) {
-                c.spend(action);
-              } else {
-                assist(context, action);
-              }
+  ) => hudButton(
+    icon,
+    c.available(action)
+        ? () {
+            if (c.cost(action) == 0) {
+              c.spend(action);
+            } else {
+              assist(context, action);
             }
-          : null,
-      style: FilledButton.styleFrom(
-        backgroundColor: Colors.white,
-        foregroundColor: ink,
-        minimumSize: const Size(0, 58),
-        padding: const EdgeInsets.symmetric(horizontal: 5),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 21),
-          Text(
-            '$text · ${c.cost(action) == 0 ? 'FREE' : c.cost(action)}',
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900),
-          ),
-        ],
-      ),
-    ),
+          }
+        : null,
+    tip: text,
+    key: ValueKey(action.name),
+    badge: c.cost(action) == 0 ? 'FREE' : '${c.cost(action)}',
+    colors: action == Assist.hint
+        ? const [Color(0xFFFFD45C), Color(0xFFF59E0B)]
+        : const [Color(0xFF6EE7A8), Color(0xFF22B573)],
   );
 
   Widget resultOverlay(BuildContext context, GamePhase phase) {
@@ -926,15 +942,15 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
                   SizedBox(
                     height: won ? 90 : 100,
                     width: double.infinity,
-                    child: UrbanArtwork(won ? 'win' : 'fail'),
+                    child: CustomPaint(painter: ResultArtPainter(won)),
                   ),
                   const SizedBox(height: 12),
                   Text(
                     won
                         ? result?.stars == 3
-                              ? 'Perfect dispatch!'
-                              : 'Route complete!'
-                        : 'Terminal full',
+                              ? 'Perfect!'
+                              : 'Level complete!'
+                        : 'Slots full!',
                     key: ValueKey(won ? 'win' : 'fail'),
                     textAlign: TextAlign.center,
                     style: const TextStyle(
@@ -991,7 +1007,7 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
                           color: const Color(0xFFAB7A25),
                         ),
                         pill(
-                          Icons.local_parking_rounded,
+                          Icons.chair_rounded,
                           '${result?.parkingCost ?? c.parkingCost} / ${c.level.parkingTarget}',
                         ),
                       ],
@@ -1011,7 +1027,7 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
                     ),
                     const SizedBox(height: 19),
                     primary(
-                      c.dailyMode ? 'Back to my routes' : 'Next route',
+                      c.dailyMode ? 'Back to my routes' : 'Next level',
                       () {
                         if (c.dailyMode) {
                           home();
@@ -1044,7 +1060,7 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
                   ] else ...[
                     const SizedBox(height: 10),
                     Text(
-                      '${c.board.slots} spaces are occupied. ${colorNames[c.level.passengers[c.board.cursor].index]} passengers need their bus.\nTry a different release order.',
+                      'All ${c.board.slots} waiting slots are full.\nThe ${colorNames[c.board.currentBus(c.level)!.index]} bus is still waiting for its passengers.',
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         height: 1.5,
@@ -1056,7 +1072,7 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
                       primary(
                         c.cost(Assist.undo) == 0
                             ? 'Undo · FREE'
-                            : 'Undo the last bus',
+                            : 'Undo the last tap',
                         () {
                           if (c.cost(Assist.undo) == 0) {
                             c.spend(Assist.undo);
@@ -1072,7 +1088,7 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
                         key: const ValueKey('continue'),
                         onPressed: () => assist(context, Assist.extraSlot),
                         child: Text(
-                          'Extra space · ${c.cost(Assist.extraSlot)} coins',
+                          'Extra slot · ${c.cost(Assist.extraSlot)} coins',
                         ),
                       ),
                     TextButton(
@@ -1483,20 +1499,20 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
         const ListTile(
           contentPadding: EdgeInsets.zero,
           leading: Icon(Icons.touch_app_rounded, color: teal),
-          title: Text('Tap a front bus'),
-          subtitle: Text('Send it into an open parking space.'),
+          title: Text('Tap a passenger with a clear path'),
+          subtitle: Text('Blocked passengers wait until the way opens.'),
         ),
         const ListTile(
           contentPadding: EdgeInsets.zero,
           leading: Icon(Icons.people_alt_rounded, color: teal),
-          title: Text('Match the first passenger'),
-          subtitle: Text('Same color and symbol. They board in order.'),
+          title: Text('Match the bus colour'),
+          subtitle: Text('Others wait in the slots and board later.'),
         ),
         const ListTile(
           contentPadding: EdgeInsets.zero,
           leading: Icon(Icons.directions_bus_rounded, color: teal),
           title: Text('Full buses roll out'),
-          subtitle: Text('Keep a space free to avoid a traffic jam.'),
+          subtitle: Text('Fill all five slots and the stop jams.'),
         ),
         const SizedBox(height: 20),
         primary('Got it. Let’s go!', () {
@@ -1532,7 +1548,7 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
           Text(switch (action) {
             Assist.hint => 'Highlight a bus that leads to a solution.',
             Assist.undo => 'Return to the state before your last move.',
-            Assist.extraSlot => 'Add one parking space for this attempt.',
+            Assist.extraSlot => 'Add one waiting slot for this attempt.',
           }),
           const SizedBox(height: 24),
           primary(
@@ -1730,7 +1746,7 @@ class _BusJamAppState extends State<BusJamApp> with WidgetsBindingObserver {
             ),
             const SizedBox(height: 14),
             const Text(
-              'BUS SURGE  /  1.1.0\nYour city. Your next move.',
+              'BUS SURGE  /  2.0.0\nYour city. Your next move.',
               style: TextStyle(
                 color: Color(0xFF8E9B8E),
                 fontSize: 11,
