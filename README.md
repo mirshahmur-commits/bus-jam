@@ -5,7 +5,7 @@ Code-drawn open-top toy buses and chunky passengers on a lavender city stop, bun
 typography, walking/boarding/departure motion, procedural sound and an offline
 game engine.
 
-Version 2.0 replaces the depot puzzle with the classic bus-jam loop: a crowd
+Version 2.1 adds the endless rush. Version 2.0 replaced the depot puzzle with the classic bus-jam loop: a crowd
 of passengers queuing below, buses arriving one by one above and five waiting slots in
 between. See [crowd rules](docs/REDESIGN.md). Old saves keep coins, unlocked
 routes, collection and settings; the active board restarts as a crowd puzzle.
@@ -13,6 +13,14 @@ routes, collection and settings; the active board restarts as a crowd puzzle.
 <img src="docs/evidence/screens/02-gameplay.png" width="230" alt="Bus Surge gameplay"> <img src="docs/evidence/screens/02b-gameplay-progress.png" width="230" alt="Passengers boarding">
 
 ## Play
+
+**Endless rush** (main mode): the crowd never stops walking up four lanes and
+the pace keeps rising. Fill buses, combo direct boardings and beat your
+record before the stop jams or the crowd overflows. Spend coins on Rainbow
+(30 s, anyone boards any bus), Slow-mo (20 s) and Taxi boosters, and on
+permanent upgrades: bigger buses, a wider stop and a calmer crowd.
+
+**Puzzle levels**:
 
 Tap a **lane** to send its front passenger to the stop; the line steps
 forward and the crowd keeps streaming up. If their colour matches the bus at

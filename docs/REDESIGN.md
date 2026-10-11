@@ -50,3 +50,32 @@ Save schema 3 stores lane progress, waiting slots and bus progress. Schema 1
 and 2 saves (depot puzzle) keep coins, unlocked routes, collection, settings,
 streak and purchases and open the same route number as a crowd puzzle. Medals
 earned on retired boards do not count toward crowd-route stars.
+
+## Endless rush (2.1)
+
+The main mode is an endless, real-time rush for a personal record.
+
+- Four lanes; passengers never stop arriving at the back of random lanes.
+  Arrivals start every 1.3 s and speed up with every bus sent and every
+  second played (floor 0.38 s). Seven per lane open the run.
+- Tap a lane: the front passenger boards the bus at the stop if the colour
+  matches, otherwise waits in a slot. Full buses leave; matching waiting
+  passengers board the next bus by themselves.
+- The run ends when every waiting slot is taken (stop jammed) or a newcomer
+  finds every lane full (crowd overflow).
+- Fairness: each scheduled bus adds exactly its seat colours to an arrival
+  bag; arrivals are drawn from about two buses ahead, so every passenger
+  has a scheduled seat and arrivals roughly follow the bus order. Boosters
+  that move passengers rebalance the bag so this stays true.
+- Score: 10 per direct boarding plus a combo bonus (up to +20), 5 per
+  passenger boarding from a slot or leaving by taxi, 25 per bus sent.
+  Coins: one per 50 points, awarded once per run. Best score is saved.
+- Boosters (coins, one starter of each): Rainbow — 30 s where anyone boards
+  any bus (60); Slow-mo — 20 s of half-speed arrivals (40); Taxi — clears
+  the waiting slots, also rescues a jammed run (50).
+- Permanent upgrades: Bigger buses 4/5/6 seats (300/700/1500), Wider stop
+  6/7 slots (400/1000), Calm crowd +0.25 s start pace (250/600).
+- One extra slot per run for 50 coins (lock tile or after a jam).
+- The rush pauses from the pause button and whenever the app leaves the
+  foreground. Runs are not saved mid-way; coins are awarded when the run
+  is settled (play again, shop, home or end run).

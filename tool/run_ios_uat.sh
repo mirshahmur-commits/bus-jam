@@ -62,10 +62,10 @@ from pathlib import Path
 report=json.loads(Path('test-results/ios-uat.json').read_text())
 assert report.get('journey') == 'Passed', 'Native player journey did not pass'
 screens=list(Path('test-results/ios-screens').glob('*.png'))
-assert len(screens) == 7 and all(p.stat().st_size > 0 for p in screens), 'Expected seven native screenshots'
-for check in ['rapidInput', 'collectionEarnBuyRestore', 'starsAndRecords']:
+assert len(screens) == 8 and all(p.stat().st_size > 0 for p in screens), 'Expected eight native screenshots'
+for check in ['rapidInput', 'collectionEarnBuyRestore', 'starsAndRecords', 'endlessRush']:
     assert report.get(check) == 'Passed', 'Missing native scenario: ' + check
-print('Native journey Passed with seven screenshots and redesign scenarios.')
+print('Native journey Passed with eight screenshots, redesign and endless rush scenarios.')
 PY
 
 

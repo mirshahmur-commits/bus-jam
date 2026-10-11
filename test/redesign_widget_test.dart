@@ -36,11 +36,11 @@ void main() {
   );
 
   testWidgets(
-    'Play is visible without scrolling on a small phone and garage goal opens the shop',
+    'Rush is visible without scrolling on a small phone and garage goal opens the shop',
     (t) async {
       await mount(t, size: const Size(320, 568));
-      final play = find.byKey(const ValueKey('play'));
-      expect(t.getRect(play).bottom, lessThan(500));
+      final rush = find.byKey(const ValueKey('rush'));
+      expect(t.getRect(rush).bottom, lessThan(500));
       await tap(t, 'garage-goal');
       expect(find.byKey(const ValueKey('garage')), findsOneWidget);
       expect(find.text('Metro Line'), findsOneWidget);

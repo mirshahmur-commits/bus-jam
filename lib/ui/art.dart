@@ -244,6 +244,13 @@ void paintRider(
   c.restore();
 }
 
+/// Horizontal position of [seat] as a fraction of the bus length.
+double coachSeat(int seat, int capacity) =>
+    capacity <= 1 ? .5 : .27 + seat * .44 / (capacity - 1);
+
+/// Seat back width as a fraction of the bus length.
+double coachSeatWidth(int capacity) => min(.13, .5 / capacity);
+
 /// Open-top toy bus seen from the side, facing right. Seated passengers sit
 /// between the seat backs; [emptySeats] are still on their way.
 void paintCoach(
@@ -251,13 +258,27 @@ void paintCoach(
   Rect r,
   BusColor color, {
   int seated = 0,
+  int capacity = busCapacity,
   String skin = 'classic',
   Set<int> emptySeats = const {},
+  bool rainbow = false,
 }) {
   final base = busColors[color.index];
   final w = r.width, h = r.height;
   c.save();
   c.translate(r.left, r.top);
+  if (rainbow) {
+    final glow = Rect.fromLTWH(-6, -6, w + 12, h * .95 + 12);
+    c.drawRRect(
+      RRect.fromRectAndRadius(glow, Radius.circular(h * .2)),
+      Paint()
+        ..shader = const SweepGradient(
+          colors: [...busColors, Color(0xFFF2583F)],
+        ).createShader(glow)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 5,
+    );
+  }
   c.drawOval(
     Rect.fromLTWH(w * .03, h * .88, w * .94, h * .14),
     Paint()..color = Colors.black.withValues(alpha: .16),
@@ -269,23 +290,30 @@ void paintCoach(
     topRight: Radius.circular(h * .16),
   );
   c.drawRRect(cabin, Paint()..color = tint(base, .72).withValues(alpha: .7));
-  for (int seat = 0; seat < busCapacity; seat++) {
-    final x = w * (.27 + seat * .22);
-    final back = Rect.fromLTWH(x - w * .065, h * .13, w * .13, h * .42);
+  final seatW = w * coachSeatWidth(capacity);
+  for (int seat = 0; seat < capacity; seat++) {
+    final x = w * coachSeat(seat, capacity);
+    final back = Rect.fromLTWH(x - seatW / 2, h * .13, seatW, h * .42);
     rr(c, back, const Color(0xFFA3A6C6), h * .06);
     rr(
       c,
       Rect.fromLTWH(
-        back.left + w * .012,
+        back.left + seatW * .1,
         back.top + h * .03,
-        back.width - w * .024,
+        seatW * .8,
         h * .13,
       ),
       const Color(0xFFCDCFE6),
       h * .04,
     );
     if (seat < seated && !emptySeats.contains(seat)) {
-      paintRider(c, Offset(x + w * .07, h * .8), h * .56, base, shadow: false);
+      paintRider(
+        c,
+        Offset(x + seatW * .55, h * .8),
+        min(h * .56, seatW * 4.3),
+        rainbow ? busColors[(seat * 2 + color.index) % busColors.length] : base,
+        shadow: false,
+      );
     }
   }
   final frame = Paint()

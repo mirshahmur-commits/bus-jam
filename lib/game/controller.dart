@@ -10,6 +10,7 @@ import '../platform/progress_store.dart';
 import 'engine.dart';
 import 'generator.dart';
 import 'model.dart';
+import 'endless.dart';
 import 'progression.dart';
 
 enum Assist { hint, undo, extraSlot }
@@ -60,6 +61,16 @@ class GameController extends ChangeNotifier {
   final rankedDailyScores = <String, int>{};
   final ownedCosmetics = <String>{'classic', 'terminal-classic'};
   String selectedBus = 'classic', selectedTerminal = 'terminal-classic';
+
+  /// Endless rush: the active run, personal best and purchases.
+  EndlessRun? rush;
+  int bestScore = 0, rushRuns = 0;
+  bool rushNewBest = false, rushSettled = false;
+  int rushReward = 0;
+  final upgrades = <Upgrade, int>{};
+
+  /// Boosters owned; a starter pack of one each helps new players learn.
+  final boosters = <Booster, int>{for (final b in Booster.values) b: 1};
   bool usedHint = false, freeUndoUsed = false;
   int undosUsed = 0;
   int get parkingCost =>
@@ -191,6 +202,7 @@ class GameController extends ChangeNotifier {
             selectedTerminal = terminal;
           }
         }
+        _loadRush(j['rush'] as Map<String, dynamic>?);
       }
     } catch (_) {
       level = generator.generate(1);
@@ -286,6 +298,12 @@ class GameController extends ChangeNotifier {
     'ownedCosmetics': ownedCosmetics.toList()..sort(),
     'selectedBus': selectedBus,
     'selectedTerminal': selectedTerminal,
+    'rush': {
+      'best': bestScore,
+      'runs': rushRuns,
+      'upgrades': {for (final e in upgrades.entries) e.key.name: e.value},
+      'boosters': {for (final e in boosters.entries) e.key.name: e.value},
+    },
   });
   Future<void> save() {
     final value = snapshot();
@@ -756,6 +774,147 @@ class GameController extends ChangeNotifier {
 
   void finishOnboarding() {
     onboarded = true;
+    _changed();
+  }
+
+  void _loadRush(Map<String, dynamic>? j) {
+    if (j == null) return;
+    final best = j['best'] as int, runs = j['runs'] as int;
+    if (best < 0 || best > 100000000 || runs < 0) {
+      throw const FormatException('Invalid rush record');
+    }
+    final nextUpgrades = <Upgrade, int>{};
+    for (final e in (j['upgrades'] as Map<String, dynamic>).entries) {
+      final u = Upgrade.values.byName(e.key);
+      final level = e.value as int;
+      if (level < 0 || level > upgradeMax(u)) {
+        throw const FormatException('Invalid upgrade');
+      }
+      nextUpgrades[u] = level;
+    }
+    final nextBoosters = <Booster, int>{};
+    for (final e in (j['boosters'] as Map<String, dynamic>).entries) {
+      final count = e.value as int;
+      if (count < 0 || count > 999) {
+        throw const FormatException('Invalid booster count');
+      }
+      nextBoosters[Booster.values.byName(e.key)] = count;
+    }
+    bestScore = best;
+    rushRuns = runs;
+    upgrades
+      ..clear()
+      ..addAll(nextUpgrades);
+    boosters
+      ..clear()
+      ..addAll({for (final b in Booster.values) b: nextBoosters[b] ?? 0});
+  }
+
+  /// Starts a new endless rush with the player's upgrades.
+  void startRush() {
+    if (busy) return;
+    rush = EndlessRun(
+      RushConfig.fromUpgrades(
+        upgrades,
+        clock().microsecondsSinceEpoch & 0x7FFFFFFF,
+      ),
+    );
+    rushNewBest = false;
+    rushSettled = false;
+    rushReward = 0;
+    analytics.track('rush_start', {
+      'bigBus': upgrades[Upgrade.bigBus] ?? 0,
+      'wideStop': upgrades[Upgrade.wideStop] ?? 0,
+      'calmCrowd': upgrades[Upgrade.calmCrowd] ?? 0,
+    });
+    notifyListeners();
+  }
+
+  /// Advances the rush clock; returns lanes that received newcomers.
+  List<int> rushTick(int ms) {
+    final run = rush;
+    if (run == null || run.over) return const [];
+    final arrived = run.advance(ms);
+    if (run.over) {
+      notifyListeners();
+    } else if (arrived.isNotEmpty) {
+      notifyListeners();
+    }
+    return arrived;
+  }
+
+  RushMove rushTap(int lane) {
+    final run = rush;
+    if (run == null || busy) return const RushMove();
+    final move = run.tap(lane);
+    if (move.accepted) notifyListeners();
+    return move;
+  }
+
+  /// Uses one owned booster in the active rush.
+  RushMove? useBooster(Booster b) {
+    final run = rush;
+    if (run == null || busy || rushSettled || (boosters[b] ?? 0) < 1) {
+      return null;
+    }
+    final move = run.use(b);
+    if (move == null) return null;
+    boosters[b] = boosters[b]! - 1;
+    analytics.track('booster_use', {'booster': b.name, 'score': run.score});
+    _changed();
+    return move;
+  }
+
+  bool buyBooster(Booster b) {
+    final price = boosterPrices[b]!;
+    if (busy || coins < price) return false;
+    coins -= price;
+    boosters[b] = (boosters[b] ?? 0) + 1;
+    analytics.track('booster_buy', {'booster': b.name, 'cost': price});
+    _changed();
+    return true;
+  }
+
+  bool buyUpgrade(Upgrade u) {
+    final level = upgrades[u] ?? 0;
+    final price = upgradePrice(u, level);
+    if (busy || price == null || coins < price) return false;
+    coins -= price;
+    upgrades[u] = level + 1;
+    analytics.track('upgrade_buy', {'upgrade': u.name, 'level': level + 1});
+    _changed();
+    return true;
+  }
+
+  /// Continues a jammed rush with one extra slot, for coins.
+  bool rushContinue() {
+    final run = rush;
+    if (run == null || rushSettled || coins < 50 || !run.addSlot()) {
+      return false;
+    }
+    coins -= 50;
+    analytics.track('rush_continue', {'score': run.score});
+    _changed();
+    return true;
+  }
+
+  /// Ends the rush: awards coins once and records a new personal best.
+  void settleRush() {
+    final run = rush;
+    if (run == null || rushSettled) return;
+    rushSettled = true;
+    rushReward = run.coins;
+    coins += rushReward;
+    rushRuns++;
+    rushNewBest = run.score > bestScore;
+    if (rushNewBest) bestScore = run.score;
+    analytics.track('rush_end', {
+      'score': run.score,
+      'delivered': run.delivered,
+      'buses': run.busesSent,
+      'reason': run.end.name,
+      'seconds': run.clock ~/ 1000,
+    });
     _changed();
   }
 
